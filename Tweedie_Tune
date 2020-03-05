@@ -1,0 +1,98 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Tweedie tune"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# retrieve project\n",
+    "project = dr.Project.get('5e61264f74a35f04a0d75d0b')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 60,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Frequency-Cost Generalized Additive2 Model\n",
+      "39.9999825\n",
+      "5e6141f011bc9b3a7f16b34e\n",
+      "Generalized Additive Model (Tweedie Loss: 1.5)\n",
+      "39.9999825\n",
+      "5e6141f011bc9b3a7f16b350\n",
+      "Frequency-Severity Generalized Additive2 Model\n",
+      "39.9999825\n",
+      "5e6141f011bc9b3a7f16b34f\n"
+     ]
+    }
+   ],
+   "source": [
+    "# list out models in project\n",
+    "project_models = project.get_models()\n",
+    "for model in project_models: print(model.model_type); print(model.sample_pct);print(model.id)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 62,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# retrieve specific model by id listed above (copy-paste)\n",
+    "model_for_tuning = dr.models.Model(id = '5e6141f011bc9b3a7f16b350', project_id = project.id)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#First, set up an advanced tuning session\n",
+    "tune = model_for_tuning.start_advanced_tuning_session()\n",
+    "\n",
+    "#Specify p_values to search over\n",
+    "p_values = [1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 1.9]\n",
+    "\n",
+    "#Add model to leaderboard for each p-value\n",
+    "for p_val in p_values:\n",
+    "    tune.set_parameter(parameter_name = 'tweedie_p',\n",
+    "                       value = p_val)\n",
+    "    job = tune.run()"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
