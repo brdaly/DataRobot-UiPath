@@ -1,0 +1,1592 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Hyperparameter Tuning via the DataRobot API"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Project set-up and running a model with Autopilot"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We'll set up our project by importing packages and connecting to the DataRobot API."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 134,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import matplotlib.pyplot as plt\n",
+    "import pprint as pp\n",
+    "import itertools\n",
+    "import random\n",
+    "from hyperopt import hp, tpe, fmin\n",
+    "import time\n",
+    "\n",
+    "import datarobot as dr"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 135,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<datarobot.rest.RESTClientObject at 0xa1b52e0b8>"
+      ]
+     },
+     "execution_count": 135,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "dr.Client(token = \"\", #Your Token here!\n",
+    "          endpoint = \"https://app.datarobot.com/api/v2\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Specify or load a project for hyperparameter tuning. You can also choose to create a project via the API. In this case, I've run Autopilot on the Lending Club Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 136,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Project ID: 5d153c609dba961e88c52f20\n"
+     ]
+    }
+   ],
+   "source": [
+    "project_name = \"Lending Club Hyperparameter Tuning with API Demo\"\n",
+    "url = 'https://s3.amazonaws.com/datarobot_public_datasets/DR_Demo_LendingClub_Guardrails.csv'\n",
+    "project = dr.Project.create(url, project_name=project_name)\n",
+    "print('Project ID: {}'.format(project.id))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we're going to run Autopilot"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 137,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "In progress: 20, queued: 20 (waited: 0s)\n",
+      "In progress: 20, queued: 20 (waited: 0s)\n",
+      "In progress: 20, queued: 20 (waited: 1s)\n",
+      "In progress: 20, queued: 20 (waited: 2s)\n",
+      "In progress: 20, queued: 20 (waited: 3s)\n",
+      "In progress: 20, queued: 20 (waited: 5s)\n",
+      "In progress: 20, queued: 20 (waited: 8s)\n",
+      "In progress: 20, queued: 20 (waited: 15s)\n",
+      "In progress: 19, queued: 17 (waited: 28s)\n",
+      "In progress: 19, queued: 2 (waited: 48s)\n",
+      "In progress: 18, queued: 0 (waited: 68s)\n",
+      "In progress: 5, queued: 0 (waited: 89s)\n",
+      "In progress: 1, queued: 0 (waited: 109s)\n",
+      "In progress: 18, queued: 0 (waited: 129s)\n",
+      "In progress: 16, queued: 0 (waited: 149s)\n",
+      "In progress: 7, queued: 0 (waited: 170s)\n",
+      "In progress: 0, queued: 0 (waited: 190s)\n",
+      "In progress: 10, queued: 0 (waited: 210s)\n",
+      "In progress: 8, queued: 0 (waited: 230s)\n",
+      "In progress: 7, queued: 0 (waited: 250s)\n",
+      "In progress: 3, queued: 0 (waited: 271s)\n",
+      "In progress: 1, queued: 0 (waited: 291s)\n",
+      "In progress: 1, queued: 0 (waited: 311s)\n",
+      "In progress: 20, queued: 9 (waited: 331s)\n",
+      "In progress: 20, queued: 2 (waited: 351s)\n",
+      "In progress: 19, queued: 0 (waited: 372s)\n",
+      "In progress: 9, queued: 0 (waited: 392s)\n",
+      "In progress: 4, queued: 0 (waited: 412s)\n",
+      "In progress: 1, queued: 0 (waited: 432s)\n",
+      "In progress: 0, queued: 0 (waited: 452s)\n",
+      "In progress: 5, queued: 0 (waited: 473s)\n",
+      "In progress: 5, queued: 0 (waited: 493s)\n",
+      "In progress: 5, queued: 0 (waited: 513s)\n",
+      "In progress: 1, queued: 0 (waited: 533s)\n",
+      "In progress: 0, queued: 0 (waited: 553s)\n",
+      "In progress: 3, queued: 0 (waited: 573s)\n",
+      "In progress: 2, queued: 0 (waited: 593s)\n",
+      "In progress: 1, queued: 0 (waited: 614s)\n",
+      "In progress: 1, queued: 0 (waited: 634s)\n",
+      "In progress: 1, queued: 0 (waited: 654s)\n",
+      "In progress: 4, queued: 0 (waited: 674s)\n",
+      "In progress: 4, queued: 0 (waited: 694s)\n",
+      "In progress: 4, queued: 0 (waited: 714s)\n",
+      "In progress: 2, queued: 0 (waited: 734s)\n",
+      "In progress: 0, queued: 0 (waited: 755s)\n",
+      "In progress: 0, queued: 0 (waited: 775s)\n"
+     ]
+    }
+   ],
+   "source": [
+    "project.set_worker_count(-1) # increase the worker count to make the project go faster.\n",
+    "project.set_target('is_bad', mode=\"auto\")\n",
+    "project.wait_for_autopilot()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Establishing baseline accuracy from Autopilot"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 138,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'backtesting': None,\n",
+       " 'holdout': None,\n",
+       " 'backtestingScores': None,\n",
+       " 'crossValidation': 0.37193400000000004,\n",
+       " 'validation': 0.37285}"
+      ]
+     },
+     "execution_count": 138,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "project_id = project.id\n",
+    "models = project.get_models(order_by = \"-metric\") #the key metric here is log loss, so lower is better\n",
+    "baseline= models[0] #finds the best performing model\n",
+    "baseline.metrics[project.metric]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 139,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "'LogLoss'\n"
+     ]
+    }
+   ],
+   "source": [
+    "#This is our primary evaluation metric\n",
+    "pp.pprint(project.metric)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Common strategies for hyperparameter tuning\n",
+    "\n",
+    "There are four common strategies for hyperparameter tuning. Best practice will depend on the needs of the project, the size of the dataset, the algorithms being used, and availability of domain expertise.\n",
+    "\n",
+    "1. Manual\n",
+    "2. Grid search\n",
+    "3. Random\n",
+    "4. Optimized\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 1. Manual Optimization\n",
+    "\n",
+    "Manual optimization is most commonly used by domain experts who want to specify or test specific values for hyperparameters. This strategy is not automated - it's more of a guess and check approach. If you have a good idea of what parameters might be helpful based on prior knowledge, published literature, etc., you can get to results more quickly than a brute force approach."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "For this example, we're going to use our highest-performing Gradient Boosted Trees model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 140,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Model('eXtreme Gradient Boosted Trees Classifier with Early Stopping')"
+      ]
+     },
+     "execution_count": 140,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "GB_models, = np.where([\"Gradient Boosted Trees\" in x.model_type for x in models])\n",
+    "model_to_tune = models[GB_models.min()]\n",
+    "model_to_tune"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 141,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "'Missing Values Imputed'\n",
+      "['arbimp', 'min_count_na']\n",
+      "\n",
+      "'Ordinal encoding of categorical variables'\n",
+      "['card_max', 'method', 'min_support']\n",
+      "\n",
+      "'eXtreme Gradient Boosted Trees Classifier with Early Stopping'\n",
+      "['base_margin_initialize',\n",
+      " 'colsample_bylevel',\n",
+      " 'colsample_bytree',\n",
+      " 'interval',\n",
+      " 'learning_rate',\n",
+      " 'max_bin',\n",
+      " 'max_delta_step',\n",
+      " 'max_depth',\n",
+      " 'min_child_weight',\n",
+      " 'min_split_loss',\n",
+      " 'missing_value',\n",
+      " 'n_estimators',\n",
+      " 'num_parallel_tree',\n",
+      " 'random_state',\n",
+      " 'reg_alpha',\n",
+      " 'reg_lambda',\n",
+      " 'scale_pos_weight',\n",
+      " 'smooth_interval',\n",
+      " 'subsample',\n",
+      " 'tree_method']\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#First, set up an advanced tuning session\n",
+    "tune = model_to_tune.start_advanced_tuning_session()\n",
+    "\n",
+    "#View the different tasks available for tuning - in this case, the model itself plus pre-processing parameters and missing value imputation\n",
+    "tasks = tune.get_task_names()\n",
+    "for task in tasks:\n",
+    "    pp.pprint(task)\n",
+    "    pp.pprint(tune.get_parameter_names(task))\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To aid in hyperparameter tuning, DataRobot also provides additional detail about each hyperparameters. In particular, note the constraints section - this will specify the required parameter type, range, whether it can be missing, etc.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 142,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "param_details = model_to_tune.get_advanced_tuning_parameters()[\"tuning_parameters\"]\n",
+    "param_list = [x[\"parameter_name\"] for x in param_details] #see list of tuned parameters"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 143,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "learning_rate\n",
+      "{'constraints': {'float': {'max': 1.0,\n",
+      "                           'min': 0.0005,\n",
+      "                           'supports_grid_search': False}},\n",
+      " 'current_value': 0.05,\n",
+      " 'default_value': 0.05,\n",
+      " 'parameter_id': 'eyJhcmciOiJsZWFybmluZ19yYXRlIiwidmlkIjoiOCJ9',\n",
+      " 'parameter_name': 'learning_rate',\n",
+      " 'task_name': 'eXtreme Gradient Boosted Trees Classifier with Early Stopping'}\n",
+      "\n",
+      "n_estimators\n",
+      "{'constraints': {'int': {'max': 20000,\n",
+      "                         'min': 1,\n",
+      "                         'supports_grid_search': False}},\n",
+      " 'current_value': 2500,\n",
+      " 'default_value': 2500,\n",
+      " 'parameter_id': 'eyJhcmciOiJuX2VzdGltYXRvcnMiLCJ2aWQiOiI4In0',\n",
+      " 'parameter_name': 'n_estimators',\n",
+      " 'task_name': 'eXtreme Gradient Boosted Trees Classifier with Early Stopping'}\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Specify variables to tune\n",
+    "variables_to_tune = [\"learning_rate\",\"n_estimators\"]\n",
+    "\n",
+    "#View the appropriate constraints\n",
+    "for var in variables_to_tune:\n",
+    "    print(var)\n",
+    "    pp.pprint (param_details[param_list.index(var)])\n",
+    "    print()\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 144,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Manually set the parameters\n",
+    "tune.set_parameter(parameter_name = \"learning_rate\",\n",
+    "                     value = 0.001)\n",
+    "tune.set_parameter(parameter_name = \"n_estimators\", \n",
+    "                     value = 10000)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 145,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "{'backtesting': None,\n",
+      " 'backtestingScores': None,\n",
+      " 'crossValidation': 0.37229000000000007,\n",
+      " 'holdout': None,\n",
+      " 'validation': 0.37318}\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Run the job and get the results when the model has finished\n",
+    "job = tune.run()\n",
+    "manual_model = job.get_result_when_complete()\n",
+    "pp.pprint (manual_model.metrics[project.metric])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 2. Grid and Random Search\n",
+    "\n",
+    "Grid search is an exhaustive search of a certain parameter space. This approach is more likely to find a global maximum rather than a local one, but depending on the data size and the number of hyperaparameters for tuning, it can take prohibitively long to run an entire grid.\n",
+    "\n",
+    "Random is a variant of grid search that randomly selects values from the full grid and runs the model using those parameters. It does not learn from the results of previous guesses. A random search that draws from 100% of the parameter grid is equivalent to a grid search."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We're going to move onto a different model - Elastic-Net models. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 146,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Model('Elastic-Net Classifier (L2 / Binomial Deviance)')"
+      ]
+     },
+     "execution_count": 146,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "ENet_models, = np.where([\"Elastic-Net\" in x.model_type for x in models])\n",
+    "model_to_tune = models[ENet_models.min()]\n",
+    "model_to_tune"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 147,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "'Elastic-Net Classifier (L2 / Binomial Deviance)'\n",
+      "['enet_alpha',\n",
+      " 'enet_lambda',\n",
+      " 'fit_alpha_scaler',\n",
+      " 'fit_intercept',\n",
+      " 'max_iter',\n",
+      " 'random_state',\n",
+      " 'sigma',\n",
+      " 'tol']\n",
+      "\n",
+      "'PDM3'\n",
+      "['max_features', 'min_support']\n",
+      "\n",
+      "'PTM3'\n",
+      "['analyzer',\n",
+      " 'binary',\n",
+      " 'language',\n",
+      " 'lowercase',\n",
+      " 'max_features',\n",
+      " 'max_ngram',\n",
+      " 'min_ngram',\n",
+      " 'norm',\n",
+      " 'smooth_idf',\n",
+      " 'stemmer',\n",
+      " 'sublinear_tf',\n",
+      " 'tokenizer',\n",
+      " 'use_idf']\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#First, set up an advanced tuning session\n",
+    "tune = model_to_tune.start_advanced_tuning_session()\n",
+    "param_details = model_to_tune.get_advanced_tuning_parameters()[\"tuning_parameters\"]\n",
+    "param_list = [x[\"parameter_name\"] for x in param_details] #see list of tuned parameters\n",
+    "\n",
+    "#View the different tasks available for tuning - in this case, the model itself plus pre-processing parameters and missing value imputation\n",
+    "tasks = tune.get_task_names()\n",
+    "for task in tasks:\n",
+    "    pp.pprint (task)\n",
+    "    pp.pprint (tune.get_parameter_names(task))\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Whereas the XGB model used tree_depth and related features to reduce overfitting, Elastic-Net models include penalization metrics from lasso and ridge regression. Note that there are also many ways to customize the text pre-processing in this model using the number of ngrams, tf/idf normalization, or stemming/tokenization. In general, the higher the number of max_ngram, the larger the total vocabulary of text features, indicating a need for more penalization to reduce the number of features in the model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 148,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "enet_alpha\n",
+      "{'constraints': {'float': {'max': 1.0,\n",
+      "                           'min': 0.0,\n",
+      "                           'supports_grid_search': False},\n",
+      "                 'select': {'values': ['auto']}},\n",
+      " 'current_value': 0,\n",
+      " 'default_value': 0,\n",
+      " 'parameter_id': 'eyJhcmciOiJlbmV0X2FscGhhIiwidmlkIjoiNiJ9',\n",
+      " 'parameter_name': 'enet_alpha',\n",
+      " 'task_name': 'Elastic-Net Classifier (L2 / Binomial Deviance)'}\n",
+      "\n",
+      "enet_lambda\n",
+      "{'constraints': {'float': {'max': 0.9999999999,\n",
+      "                           'min': 1e-10,\n",
+      "                           'supports_grid_search': False},\n",
+      "                 'select': {'values': ['auto']}},\n",
+      " 'current_value': 0.0439397056076,\n",
+      " 'default_value': 0.0439397056076,\n",
+      " 'parameter_id': 'eyJhcmciOiJlbmV0X2xhbWJkYSIsInZpZCI6IjYifQ',\n",
+      " 'parameter_name': 'enet_lambda',\n",
+      " 'task_name': 'Elastic-Net Classifier (L2 / Binomial Deviance)'}\n",
+      "\n",
+      "max_ngram\n",
+      "{'constraints': {'int': {'max': 99, 'min': 0, 'supports_grid_search': False}},\n",
+      " 'current_value': 2,\n",
+      " 'default_value': 2,\n",
+      " 'parameter_id': 'eyJhcmciOiJtYXhfbmdyYW0iLCJ2aWQiOiIyIn0',\n",
+      " 'parameter_name': 'max_ngram',\n",
+      " 'task_name': 'PTM3'}\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Specify variables to tune - I'm choosing three and filling up the grid space with reasonable values for these parameters\n",
+    "param_grid = {\n",
+    "        \"enet_alpha\": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],\n",
+    "        \"enet_lambda\": [0.001, 0.002, 0.003, 0.004, 0.005, 0.0075,\n",
+    "                        0.01, 0.02, 0.03, 0.04, 0.05, 0.075,\n",
+    "                        0.1, 0.2, 0.3, 0.4, 0.5, 0.75],\n",
+    "        \"max_ngram\": [1,2,3,4,5]}\n",
+    "parameters_to_tune = list(param_grid.keys())\n",
+    "\n",
+    "param_index = [param_list.index(x) for x in parameters_to_tune]\n",
+    "param_ids = [param_details[x][\"parameter_id\"] for x in param_index] #each parameter has a unique ID, which we need to pull out\n",
+    "keys, values = zip(*param_grid.items())\n",
+    "\n",
+    "#View the appropriate constraints\n",
+    "for var in parameters_to_tune:\n",
+    "    print(var)\n",
+    "    pp.pprint (param_details[param_list.index(var)])\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Even with the grid search limited to three variables and a limited range for each one, we still have a relatively large parameter space to search."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 149,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "900"
+      ]
+     },
+     "execution_count": 149,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(param_grid[keys[0]]) * len(param_grid[keys[1]]) * len(param_grid[keys[2]])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "A grid search would search every one of those combinations. Since that's time-prohibitive, we're going to implement a random search and run just a small portion of them. Since we're running more than one model at a time, we can create a queue and add in-progress models to them. Then, we can see the results after the models have finished running."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 150,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "random_proportion = 0.05\n",
+    "random.seed(645) #Setting random seed for reproducibility\n",
+    "queue = []\n",
+    "parameter_queue = []"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We are iterating across all combinations of these parameters and appending the jobs (and the parameter specifications) to a queue."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 151,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for v in itertools.product(*values):\n",
+    "    \n",
+    "    if random.random() < random_proportion:\n",
+    "          \n",
+    "        #set hyperparameters - maybe a better way of doing this?\n",
+    "        random_dict = dict(zip(param_ids, list(v)))\n",
+    "        \n",
+    "        try:\n",
+    "            random_job = model_to_tune.advanced_tune(random_dict)\n",
+    "        \n",
+    "        #DR will throw an error if we try and run a model with hyperparameters we've already used, which can happen\n",
+    "        #In this case, we know that we've picked the best model of the models of this type that we generated,\n",
+    "        #so we can go ahead and skip those\n",
+    "        except: \n",
+    "            continue\n",
+    "        \n",
+    "        queue.append(random_job)\n",
+    "        parameter_queue.append(random_dict.values())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 152,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.0 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.1 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.1 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.1 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.2 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.2 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.2 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.2 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.2 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=inprogress),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.3 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.4 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.4 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.4 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.4 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.4 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.4 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.5 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.5 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.5 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.5 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.5 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.6 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.6 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.6 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.6 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.6 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.6 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.7 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.7 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.7 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.8 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.8 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.8 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.8 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.9 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.9 / Binomial Deviance), status=queue),\n",
+      " ModelJob(Elastic-Net Classifier (mixing alpha=0.9 / Binomial Deviance), status=queue)]\n"
+     ]
+    }
+   ],
+   "source": [
+    "pp.pprint(queue) #This is what the queue looks like when we added jobs to it"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 153,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=inprogress),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue),\n",
+       " Job(model, status=queue)]"
+      ]
+     },
+     "execution_count": 153,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "jobs_list = project.get_all_jobs() #This is the queue with jobs running\n",
+    "jobs_list"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 154,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[]"
+      ]
+     },
+     "execution_count": 154,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "jobs_list = project.get_all_jobs() #When all those jobs finish, it'll be empty\n",
+    "jobs_list"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 155,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "col_names = ['validation','trial']\n",
+    "grid_results = pd.DataFrame(columns = col_names + list(keys))\n",
+    "\n",
+    "#Now get the results from each of the ModelJobs in the queue\n",
+    "for i in range(len(queue)):\n",
+    "    completed_model = queue[i].get_result_when_complete()\n",
+    "            \n",
+    "    eval_results = [completed_model.metrics[project.metric][\"validation\"],\n",
+    "                    i] + list(parameter_queue[i])\n",
+    "                \n",
+    "    grid_results.loc[i, :] = eval_results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 156,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>validation</th>\n",
+       "      <th>trial</th>\n",
+       "      <th>enet_alpha</th>\n",
+       "      <th>enet_lambda</th>\n",
+       "      <th>max_ngram</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>45</th>\n",
+       "      <td>0.37894</td>\n",
+       "      <td>45</td>\n",
+       "      <td>0.7</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>41</th>\n",
+       "      <td>0.37902</td>\n",
+       "      <td>41</td>\n",
+       "      <td>0.6</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>31</th>\n",
+       "      <td>0.3793</td>\n",
+       "      <td>31</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>22</th>\n",
+       "      <td>0.37958</td>\n",
+       "      <td>22</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>16</th>\n",
+       "      <td>0.37978</td>\n",
+       "      <td>16</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>35</th>\n",
+       "      <td>0.37984</td>\n",
+       "      <td>35</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>42</th>\n",
+       "      <td>0.37988</td>\n",
+       "      <td>42</td>\n",
+       "      <td>0.6</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>11</th>\n",
+       "      <td>0.3801</td>\n",
+       "      <td>11</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>23</th>\n",
+       "      <td>0.38011</td>\n",
+       "      <td>23</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>30</th>\n",
+       "      <td>0.38013</td>\n",
+       "      <td>30</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>7</th>\n",
+       "      <td>0.38017</td>\n",
+       "      <td>7</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>0.38027</td>\n",
+       "      <td>6</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>36</th>\n",
+       "      <td>0.38043</td>\n",
+       "      <td>36</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>15</th>\n",
+       "      <td>0.38043</td>\n",
+       "      <td>15</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>0.075</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>20</th>\n",
+       "      <td>0.38051</td>\n",
+       "      <td>20</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.075</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>21</th>\n",
+       "      <td>0.38073</td>\n",
+       "      <td>21</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.075</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>49</th>\n",
+       "      <td>0.38155</td>\n",
+       "      <td>49</td>\n",
+       "      <td>0.8</td>\n",
+       "      <td>0.05</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>48</th>\n",
+       "      <td>0.3816</td>\n",
+       "      <td>48</td>\n",
+       "      <td>0.8</td>\n",
+       "      <td>0.05</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>24</th>\n",
+       "      <td>0.38167</td>\n",
+       "      <td>24</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.75</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>25</th>\n",
+       "      <td>0.3817</td>\n",
+       "      <td>25</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.75</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>0.38207</td>\n",
+       "      <td>8</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.75</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>14</th>\n",
+       "      <td>0.3821</td>\n",
+       "      <td>14</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>0.04</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>34</th>\n",
+       "      <td>0.38224</td>\n",
+       "      <td>34</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.04</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>0.38236</td>\n",
+       "      <td>5</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.03</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>47</th>\n",
+       "      <td>0.38264</td>\n",
+       "      <td>47</td>\n",
+       "      <td>0.8</td>\n",
+       "      <td>0.04</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>29</th>\n",
+       "      <td>0.38294</td>\n",
+       "      <td>29</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>0.03</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>40</th>\n",
+       "      <td>0.38328</td>\n",
+       "      <td>40</td>\n",
+       "      <td>0.6</td>\n",
+       "      <td>0.03</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>32</th>\n",
+       "      <td>0.38338</td>\n",
+       "      <td>32</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.02</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>0.38355</td>\n",
+       "      <td>4</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.02</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>44</th>\n",
+       "      <td>0.38357</td>\n",
+       "      <td>44</td>\n",
+       "      <td>0.7</td>\n",
+       "      <td>0.03</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>33</th>\n",
+       "      <td>0.3842</td>\n",
+       "      <td>33</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.02</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>39</th>\n",
+       "      <td>0.38445</td>\n",
+       "      <td>39</td>\n",
+       "      <td>0.6</td>\n",
+       "      <td>0.02</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>38</th>\n",
+       "      <td>0.38452</td>\n",
+       "      <td>38</td>\n",
+       "      <td>0.6</td>\n",
+       "      <td>0.02</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>0.38565</td>\n",
+       "      <td>2</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.01</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>0.38591</td>\n",
+       "      <td>3</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.01</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>10</th>\n",
+       "      <td>0.38599</td>\n",
+       "      <td>10</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.01</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>12</th>\n",
+       "      <td>0.38599</td>\n",
+       "      <td>12</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>0.01</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0.38637</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.0075</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>13</th>\n",
+       "      <td>0.38656</td>\n",
+       "      <td>13</td>\n",
+       "      <td>0.2</td>\n",
+       "      <td>0.01</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>28</th>\n",
+       "      <td>0.38816</td>\n",
+       "      <td>28</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>0.0075</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>52</th>\n",
+       "      <td>0.392</td>\n",
+       "      <td>52</td>\n",
+       "      <td>0.9</td>\n",
+       "      <td>0.0075</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>27</th>\n",
+       "      <td>0.39279</td>\n",
+       "      <td>27</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>0.004</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0.39346</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.003</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>18</th>\n",
+       "      <td>0.39508</td>\n",
+       "      <td>18</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.003</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>19</th>\n",
+       "      <td>0.39545</td>\n",
+       "      <td>19</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.003</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>43</th>\n",
+       "      <td>0.39642</td>\n",
+       "      <td>43</td>\n",
+       "      <td>0.7</td>\n",
+       "      <td>0.004</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>51</th>\n",
+       "      <td>0.39861</td>\n",
+       "      <td>51</td>\n",
+       "      <td>0.9</td>\n",
+       "      <td>0.005</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>0.3988</td>\n",
+       "      <td>9</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.002</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>26</th>\n",
+       "      <td>0.40184</td>\n",
+       "      <td>26</td>\n",
+       "      <td>0.4</td>\n",
+       "      <td>0.002</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>46</th>\n",
+       "      <td>0.40425</td>\n",
+       "      <td>46</td>\n",
+       "      <td>0.8</td>\n",
+       "      <td>0.003</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>17</th>\n",
+       "      <td>0.41586</td>\n",
+       "      <td>17</td>\n",
+       "      <td>0.3</td>\n",
+       "      <td>0.001</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>37</th>\n",
+       "      <td>0.42439</td>\n",
+       "      <td>37</td>\n",
+       "      <td>0.6</td>\n",
+       "      <td>0.001</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>50</th>\n",
+       "      <td>0.46557</td>\n",
+       "      <td>50</td>\n",
+       "      <td>0.9</td>\n",
+       "      <td>0.001</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   validation trial enet_alpha enet_lambda max_ngram\n",
+       "45    0.37894    45        0.7         0.2         1\n",
+       "41    0.37902    41        0.6         0.2         1\n",
+       "31     0.3793    31        0.4         0.2         3\n",
+       "22    0.37958    22        0.3         0.4         5\n",
+       "16    0.37978    16        0.2         0.2         4\n",
+       "35    0.37984    35        0.5         0.1         4\n",
+       "42    0.37988    42        0.6         0.4         3\n",
+       "11     0.3801    11        0.1         0.5         2\n",
+       "23    0.38011    23        0.3         0.5         4\n",
+       "30    0.38013    30        0.4         0.1         4\n",
+       "7     0.38017     7          0         0.5         5\n",
+       "6     0.38027     6          0         0.1         5\n",
+       "36    0.38043    36        0.5         0.5         2\n",
+       "15    0.38043    15        0.2       0.075         1\n",
+       "20    0.38051    20        0.3       0.075         1\n",
+       "21    0.38073    21        0.3       0.075         3\n",
+       "49    0.38155    49        0.8        0.05         5\n",
+       "48     0.3816    48        0.8        0.05         1\n",
+       "24    0.38167    24        0.3        0.75         3\n",
+       "25     0.3817    25        0.3        0.75         5\n",
+       "8     0.38207     8          0        0.75         3\n",
+       "14     0.3821    14        0.2        0.04         3\n",
+       "34    0.38224    34        0.5        0.04         4\n",
+       "5     0.38236     5          0        0.03         2\n",
+       "47    0.38264    47        0.8        0.04         5\n",
+       "29    0.38294    29        0.4        0.03         3\n",
+       "40    0.38328    40        0.6        0.03         3\n",
+       "32    0.38338    32        0.5        0.02         1\n",
+       "4     0.38355     4          0        0.02         3\n",
+       "44    0.38357    44        0.7        0.03         3\n",
+       "33     0.3842    33        0.5        0.02         2\n",
+       "39    0.38445    39        0.6        0.02         5\n",
+       "38    0.38452    38        0.6        0.02         4\n",
+       "2     0.38565     2          0        0.01         2\n",
+       "3     0.38591     3          0        0.01         4\n",
+       "10    0.38599    10        0.1        0.01         3\n",
+       "12    0.38599    12        0.2        0.01         2\n",
+       "1     0.38637     1          0      0.0075         1\n",
+       "13    0.38656    13        0.2        0.01         5\n",
+       "28    0.38816    28        0.4      0.0075         3\n",
+       "52      0.392    52        0.9      0.0075         2\n",
+       "27    0.39279    27        0.4       0.004         3\n",
+       "0     0.39346     0          0       0.003         4\n",
+       "18    0.39508    18        0.3       0.003         4\n",
+       "19    0.39545    19        0.3       0.003         5\n",
+       "43    0.39642    43        0.7       0.004         1\n",
+       "51    0.39861    51        0.9       0.005         3\n",
+       "9      0.3988     9        0.1       0.002         5\n",
+       "26    0.40184    26        0.4       0.002         2\n",
+       "46    0.40425    46        0.8       0.003         2\n",
+       "17    0.41586    17        0.3       0.001         1\n",
+       "37    0.42439    37        0.6       0.001         3\n",
+       "50    0.46557    50        0.9       0.001         2"
+      ]
+     },
+     "execution_count": 156,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#For speed, we're comparing on a single validation set here. You could also have DR run cross-validation for these\n",
+    "#models and compare them that way\n",
+    "grid_results = grid_results.sort_values(\"validation\")\n",
+    "grid_results"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 4. Optimization"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "For this model, we're going to use our best Neural Network model. Optimization is a strategy of hyperparameter tuning in which a loss function is minimized over a specified parameter space. With optimization, trials are not independent - the results of earlier trials affect what combinations are tried later on."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 157,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Model('TensorFlow Neural Network Classifier')"
+      ]
+     },
+     "execution_count": 157,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "NN_models, = np.where([\"Neural Network\" in x.model_type for x in models])\n",
+    "model_to_tune = models[NN_models.min()]\n",
+    "model_to_tune"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 158,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "'PDM3'\n",
+      "['max_features', 'min_support']\n",
+      "\n",
+      "'TensorFlow Neural Network Classifier'\n",
+      "['W_regularizer',\n",
+      " 'activation',\n",
+      " 'batch_norm',\n",
+      " 'batch_size',\n",
+      " 'dropout_proba',\n",
+      " 'early_stopping_patience',\n",
+      " 'early_stopping_window',\n",
+      " 'epoch_size',\n",
+      " 'learning_rate',\n",
+      " 'learning_rate_init',\n",
+      " 'momentum',\n",
+      " 'n_hidden_units',\n",
+      " 'n_iter',\n",
+      " 'n_layers',\n",
+      " 'optimizer',\n",
+      " 'power_t',\n",
+      " 'random_state']\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Set up an advanced tuning session\n",
+    "tune = model_to_tune.start_advanced_tuning_session()\n",
+    "param_details = model_to_tune.get_advanced_tuning_parameters()[\"tuning_parameters\"]\n",
+    "param_list = [x[\"parameter_name\"] for x in param_details] #see list of tuned parameters\n",
+    "\n",
+    "#View the different tasks available for tuning - in this case, the model itself plus pre-processing parameters and missing value imputation\n",
+    "tasks = tune.get_task_names()\n",
+    "for task in tasks:\n",
+    "    pp.pprint (task)\n",
+    "    pp.pprint (tune.get_parameter_names(task))\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 159,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Getting tuning information, in the same way as before\n",
+    "parameters_to_tune = [\"n_layers\", \"optimizer\"]\n",
+    "param_index = [param_list.index(x) for x in parameters_to_tune]\n",
+    "param_ids = [param_details[x][\"parameter_id\"] for x in param_index]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Optimization algorithms rely on a clearly defined parameter space. Unlike in grid search, this is a probability function rather than a simple list. However, depending on which parameters you choose to optimize, there may or may not be a broad range of valid values."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 160,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "space = [hp.choice('n_layers',[2,3,4,5,6,7,8,9,10]),\n",
+    "         hp.choice('optimizer',[\"adam\",\"sgd\"])]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We also need to define a loss function. This is what the optimizer will use to make decisions about where to search next."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 129,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def function(args): \n",
+    "    arg1, arg2 = args #these are the parameters we defined in space above (in this example, n_layers and optimizer)\n",
+    "\n",
+    "    opt_dict = dict(zip(param_ids, args))\n",
+    "    \n",
+    "    print (\"n_layers: %d\" % (arg1))\n",
+    "    print (\"optimizer: %s\" % (arg2))\n",
+    "\n",
+    "    optimize_job = model_to_tune.advanced_tune(opt_dict)\n",
+    "    \n",
+    "    #while the model is still running, don't proceed\n",
+    "    while(len(project.get_all_jobs())>0):\n",
+    "        time.sleep(5)\n",
+    "    \n",
+    "    finished_model = optimize_job.get_result_when_complete()\n",
+    "    \n",
+    "    #note that we're using validation here for speed, but you could also have DR run crossvalidation for each of these \n",
+    "    #models and compare that\n",
+    "    validation_performance = finished_model.metrics[project.metric][\"validation\"] \n",
+    "    \n",
+    "    loss = validation_performance\n",
+    "    print(\"loss: %1.4f\" % loss)\n",
+    "    \n",
+    "    return (loss)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that because optimization approaches incorporate results from previous tunes into the decision of where to go next, these do not occur in parallel like the grid or random search implemented above."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 161,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "n_layers: 2                                        \n",
+      "optimizer: adam                                    \n",
+      "loss: 0.3857                                       \n",
+      "n_layers: 6                                                      \n",
+      "optimizer: sgd                                                   \n",
+      "loss: 0.3863                                                     \n",
+      "n_layers: 3                                                      \n",
+      "optimizer: adam                                                  \n",
+      "loss: 0.3866                                                     \n",
+      "n_layers: 7                                                      \n",
+      "optimizer: sgd                                                   \n",
+      "loss: 0.3864                                                     \n",
+      "n_layers: 4                                                      \n",
+      "optimizer: adam                                                  \n",
+      "loss: 0.3852                                                     \n",
+      "n_layers: 5                                                      \n",
+      "optimizer: adam                                                 \n",
+      "loss: 0.3863                                                    \n",
+      "n_layers: 2                                                     \n",
+      "optimizer: sgd                                                  \n",
+      "loss: 0.3834                                                    \n",
+      "n_layers: 7                                                      \n",
+      "optimizer: adam                                                  \n",
+      "loss: 0.3866                                                     \n",
+      "100%|██████████| 8/8 [08:54<00:00, 68.64s/it, best loss: 0.38335]\n"
+     ]
+    }
+   ],
+   "source": [
+    "best = fmin(function, space, algo=tpe.suggest, max_evals=8)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "There are some additional resources available on parameter tuning and optimization specifically below."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Resources\n",
+    "- https://towardsdatascience.com/automated-machine-learning-hyperparameter-tuning-in-python-dfda59b72f8a\n",
+    "- https://www.kaggle.com/willkoehrsen/intro-to-model-tuning-grid-and-random-search\n",
+    "- https://github.com/WillKoehrsen/hyperparameter-optimization/blob/master/Bayesian%20Hyperparameter%20Optimization%20of%20Gradient%20Boosting%20Machine.ipynb\n",
+    "- https://github.com/hyperopt/hyperopt/wiki/FMin\n",
+    "- https://blog.goodaudience.com/on-using-hyperopt-advanced-machine-learning-a2dde2ccece7"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
