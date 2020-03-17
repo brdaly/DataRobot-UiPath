@@ -1,0 +1,625 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Multiclass Recommend Project Overview\n",
+    "\n",
+    "This is one of DataRobot's demo data sets.\n",
+    "\n",
+    "The business problem is that a company has a set of products that they want to promote. They want to target customers with offers who not only will take up the offer but will also promote them on online media by reviews and feedback scores. Historical data is about the customer, previous feedback scores, customer location, and general product information about the product they are trying to promote.\n",
+    "\n",
+    "The target variable is `recommend`\n",
+    "\n",
+    "### Installing the `datarobot` package\n",
+    "The `datarobot` package is hosted on PyPI. You can install it via:\n",
+    "```\n",
+    "pip install datarobot\n",
+    "```\n",
+    "from the command line. Its main dependencies are `numpy` and `pandas`, which could take some time to install on a new system. We highly recommend use of virtualenvs to avoid conflicts with other dependencies in your system-wide python installation."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "### Load Required Packages\n",
+    "Here, we import `pandas`, `numpy`, and `datarobot` packages. By convention, we always import `datarobot` with the alias `dr`."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "outputs": [],
+   "source": [
+    "import datetime\n",
+    "import pandas as pd\n",
+    "import datarobot as dr"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% \n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "### Configure the Python Client\n",
+    "Configuring the client requires the following two things:\n",
+    "\n",
+    "- A DataRobot endpoint - where the API server can be found\n",
+    "- A DataRobot API token - a token the server uses to identify and validate the user making API requests\n",
+    "\n",
+    "The endpoint is usually the URL you would use to log into the DataRobot Web User Interface (e.g., https://app.datarobot.com) with \"/api/v2/\" appended, e.g., (https://app.datarobot.com/api/v2/).\n",
+    "\n",
+    "You can find your API token by logging into the DataRobot Web User Interface and looking under `API Key Management`.\n",
+    "\n",
+    "The Python client can be configured in several ways. The example we'll use in this notebook is to point to a `yaml` file that has the information. This is a text file containing two lines like this:\n",
+    "```yaml\n",
+    "endpoint: https://app.datarobot.com/api/v2/\n",
+    "token: not-my-real-token\n",
+    "```\n",
+    "Or, for unix based systems, create a file at `~/.config/datarobot/drconfig.yaml` containing two lines like this:\n",
+    "```\n",
+    "token: yourtoken\n",
+    "endpoint: https://app.datarobot.com/api/v2\n",
+    "```\n",
+    "\n",
+    "If you want to run this notebook without changes, please save your file at `~/.config/datarobot/drconfig.yaml`"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "<datarobot.rest.RESTClientObject at 0x117802b50>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 2
+    }
+   ],
+   "source": [
+    "# Connect to DataRobot\n",
+    "\n",
+    "# Initialization with arguments\n",
+    "# dr.Client(token='<API TOKEN>', endpoint='https://<YOUR ENDPOINT>/api/v2/')\n",
+    "\n",
+    "# Initialization with a config file in the same directory as this notebook\n",
+    "# dr.Client(config_path='drconfig.yaml')\n",
+    "\n",
+    "# Initialization with a config file located at\n",
+    "# ~/.config/datarobot/dr.config.yaml\n",
+    "dr.Client()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% \n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Read in the Data and Perform Exploratory Data Analysis\n",
+    "Here, we read in the data and view the first 5 rows."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "   reference_number            brand samplegroup  length_account  \\\n0                 1          FashMes        core              12   \n1                 2          FashMes    non core              12   \n2                 3          FashMes    non core              12   \n3                 4  FashMes ireland        core              12   \n4                 5  FashMes ireland    non core              12   \n\n   tenure_month  age  cr_type            credit_segment    profile_group  \\\n0           146   33       40  blue collar young family       aspiring     \n1           146   59       50          state pensioners  striving mature   \n2           146   49       51     hard pressed families       striving     \n3           146   30       26                       NaN              NaN   \n4           146   47       26                       NaN              NaN   \n\n  segment  ...        date  usa_weighting ireland_weighting  \\\n0      cf  ...  2016-09-11       1.357767               NaN   \n1      de  ...  2016-10-06       1.543406               NaN   \n2      de  ...  2016-10-20       2.318282               NaN   \n3     NaN  ...  2016-11-18            NaN          1.125624   \n4     NaN  ...  2016-11-20            NaN          0.622114   \n\n  combined_weighting  gender  payment_profile  zipcode_cluster   latitude  \\\n0           1.461918       f           credit               36  52.777588   \n1           1.669411       f           credit               48  50.548037   \n2           2.507548       f           credit               78  52.608931   \n3           0.559506       f           credit               65  52.693932   \n4           0.309739       f           credit               13  52.828529   \n\n   longitude  recommend  \n0  -1.957212   positive  \n1  -3.368812   positive  \n2  -1.748517   positive  \n3  -1.785787   positive  \n4  -1.713213    passive  \n\n[5 rows x 35 columns]",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>reference_number</th>\n      <th>brand</th>\n      <th>samplegroup</th>\n      <th>length_account</th>\n      <th>tenure_month</th>\n      <th>age</th>\n      <th>cr_type</th>\n      <th>credit_segment</th>\n      <th>profile_group</th>\n      <th>segment</th>\n      <th>...</th>\n      <th>date</th>\n      <th>usa_weighting</th>\n      <th>ireland_weighting</th>\n      <th>combined_weighting</th>\n      <th>gender</th>\n      <th>payment_profile</th>\n      <th>zipcode_cluster</th>\n      <th>latitude</th>\n      <th>longitude</th>\n      <th>recommend</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1</td>\n      <td>FashMes</td>\n      <td>core</td>\n      <td>12</td>\n      <td>146</td>\n      <td>33</td>\n      <td>40</td>\n      <td>blue collar young family</td>\n      <td>aspiring</td>\n      <td>cf</td>\n      <td>...</td>\n      <td>2016-09-11</td>\n      <td>1.357767</td>\n      <td>NaN</td>\n      <td>1.461918</td>\n      <td>f</td>\n      <td>credit</td>\n      <td>36</td>\n      <td>52.777588</td>\n      <td>-1.957212</td>\n      <td>positive</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>2</td>\n      <td>FashMes</td>\n      <td>non core</td>\n      <td>12</td>\n      <td>146</td>\n      <td>59</td>\n      <td>50</td>\n      <td>state pensioners</td>\n      <td>striving mature</td>\n      <td>de</td>\n      <td>...</td>\n      <td>2016-10-06</td>\n      <td>1.543406</td>\n      <td>NaN</td>\n      <td>1.669411</td>\n      <td>f</td>\n      <td>credit</td>\n      <td>48</td>\n      <td>50.548037</td>\n      <td>-3.368812</td>\n      <td>positive</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>3</td>\n      <td>FashMes</td>\n      <td>non core</td>\n      <td>12</td>\n      <td>146</td>\n      <td>49</td>\n      <td>51</td>\n      <td>hard pressed families</td>\n      <td>striving</td>\n      <td>de</td>\n      <td>...</td>\n      <td>2016-10-20</td>\n      <td>2.318282</td>\n      <td>NaN</td>\n      <td>2.507548</td>\n      <td>f</td>\n      <td>credit</td>\n      <td>78</td>\n      <td>52.608931</td>\n      <td>-1.748517</td>\n      <td>positive</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>4</td>\n      <td>FashMes ireland</td>\n      <td>core</td>\n      <td>12</td>\n      <td>146</td>\n      <td>30</td>\n      <td>26</td>\n      <td>NaN</td>\n      <td>NaN</td>\n      <td>NaN</td>\n      <td>...</td>\n      <td>2016-11-18</td>\n      <td>NaN</td>\n      <td>1.125624</td>\n      <td>0.559506</td>\n      <td>f</td>\n      <td>credit</td>\n      <td>65</td>\n      <td>52.693932</td>\n      <td>-1.785787</td>\n      <td>positive</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>5</td>\n      <td>FashMes ireland</td>\n      <td>non core</td>\n      <td>12</td>\n      <td>146</td>\n      <td>47</td>\n      <td>26</td>\n      <td>NaN</td>\n      <td>NaN</td>\n      <td>NaN</td>\n      <td>...</td>\n      <td>2016-11-20</td>\n      <td>NaN</td>\n      <td>0.622114</td>\n      <td>0.309739</td>\n      <td>f</td>\n      <td>credit</td>\n      <td>13</td>\n      <td>52.828529</td>\n      <td>-1.713213</td>\n      <td>passive</td>\n    </tr>\n  </tbody>\n</table>\n<p>5 rows × 35 columns</p>\n</div>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 3
+    }
+   ],
+   "source": [
+    "filename = \"DR_Demo_Multiclass_recommend.csv\"\n",
+    "mydata = pd.read_csv(filename)\n",
+    "\n",
+    "mydata.head()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% \n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Now, we list out the variables in the data set."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "Index(['reference_number', 'brand', 'samplegroup', 'length_account',\n       'tenure_month', 'age', 'cr_type', 'credit_segment', 'profile_group',\n       'segment', 'book_population', 'charges_3m', 'month', 'device_type',\n       'feedback-1', 'feedback-2', 'feedback-3', 'feedback-4', 'feedback-5',\n       'feedback-6', 'feedback-7', 'feedback-8', 'service', 'overall',\n       'overall_summary', 'date', 'usa_weighting', 'ireland_weighting',\n       'combined_weighting', 'gender', 'payment_profile', 'zipcode_cluster',\n       'latitude', 'longitude', 'recommend'],\n      dtype='object')"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 4
+    }
+   ],
+   "source": [
+    "mydata.columns\n"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "And we get some descriptive statistics."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "mydata.describe()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Create the Project in DataRobot\n",
+    "After we have done all the prep-processing and data prep we would like to do, we can move on to creating the project in DataRobot.\n",
+    "\n",
+    "Here, we use the `datarobot` package to upload a new file and create a project. The name of the project is optional, but can be helpful when trying to sort among many projects on DataRobot."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "outputs": [
+    {
+     "name": "stdout",
+     "text": [
+      "Project ID: 5e14caea3b6e1a1595e79386\n"
+     ],
+     "output_type": "stream"
+    }
+   ],
+   "source": [
+    "now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M')\n",
+    "project_name = 'DR_Demo_Multiclass_Recommend{}'.format(now)\n",
+    "proj = dr.Project.create(sourcedata = mydata,\n",
+    "                         project_name = project_name)\n",
+    "print('Project ID: {}'.format(proj.id))"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Select Features for Modeling\n",
+    "First, retrieve the raw feature list. This corresponds to the columns in the input spreadsheet."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "                  name         type\n0     reference_number      Numeric\n1                brand  Categorical\n2          samplegroup  Categorical\n3       length_account      Numeric\n4         tenure_month      Numeric\n5                  age      Numeric\n6              cr_type      Numeric\n7       credit_segment  Categorical\n8        profile_group  Categorical\n9              segment  Categorical\n10     book_population  Categorical\n11          charges_3m      Numeric\n12               month  Categorical\n13         device_type  Categorical\n14          feedback_1      Numeric\n15          feedback_2      Numeric\n16          feedback_3      Numeric\n17          feedback_4      Numeric\n18          feedback_5      Numeric\n19          feedback_6      Numeric\n20          feedback_7      Numeric\n21          feedback_8      Numeric\n22             service  Categorical\n23             overall  Categorical\n24     overall_summary  Categorical\n25                date         Date\n26       usa_weighting      Numeric\n27   ireland_weighting      Numeric\n28  combined_weighting      Numeric\n29              gender  Categorical\n30     payment_profile  Categorical\n31     zipcode_cluster      Numeric\n32            latitude      Numeric\n33           longitude      Numeric\n34           recommend  Categorical",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>name</th>\n      <th>type</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>reference_number</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>brand</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>samplegroup</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>length_account</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>tenure_month</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>5</th>\n      <td>age</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>6</th>\n      <td>cr_type</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>7</th>\n      <td>credit_segment</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>8</th>\n      <td>profile_group</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>9</th>\n      <td>segment</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>10</th>\n      <td>book_population</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>11</th>\n      <td>charges_3m</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>12</th>\n      <td>month</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>13</th>\n      <td>device_type</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>14</th>\n      <td>feedback_1</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>15</th>\n      <td>feedback_2</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>16</th>\n      <td>feedback_3</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>17</th>\n      <td>feedback_4</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>18</th>\n      <td>feedback_5</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>19</th>\n      <td>feedback_6</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>20</th>\n      <td>feedback_7</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>21</th>\n      <td>feedback_8</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>22</th>\n      <td>service</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>23</th>\n      <td>overall</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>24</th>\n      <td>overall_summary</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>25</th>\n      <td>date</td>\n      <td>Date</td>\n    </tr>\n    <tr>\n      <th>26</th>\n      <td>usa_weighting</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>27</th>\n      <td>ireland_weighting</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>28</th>\n      <td>combined_weighting</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>29</th>\n      <td>gender</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>30</th>\n      <td>payment_profile</td>\n      <td>Categorical</td>\n    </tr>\n    <tr>\n      <th>31</th>\n      <td>zipcode_cluster</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>32</th>\n      <td>latitude</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>33</th>\n      <td>longitude</td>\n      <td>Numeric</td>\n    </tr>\n    <tr>\n      <th>34</th>\n      <td>recommend</td>\n      <td>Categorical</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 6
+    }
+   ],
+   "source": [
+    "raw = [feat_list for feat_list in proj.get_featurelists()\n",
+    "       if feat_list.name == 'Raw Features'][0]\n",
+    "raw_features = [\n",
+    "    {\n",
+    "        \"name\": feat,\n",
+    "        \"type\": dr.Feature.get(proj.id, feat).feature_type\n",
+    "    }\n",
+    "    for feat in raw.features\n",
+    "]\n",
+    "pd.DataFrame.from_dict(raw_features)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Modify Feature Types\n",
+    "We can tweak features to improve the modeling. For example, we might change `samplegroups` from a categorical to an numeric."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "Feature(samplegroup(int))"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 7
+    }
+   ],
+   "source": [
+    "proj.create_type_transform_feature(\n",
+    "    \"samplegroup(int)\",  # new feature name\n",
+    "    \"samplegroup\",       # parent name\n",
+    "    dr.enums.VARIABLE_TYPE_TRANSFORM.NUMERIC\n",
+    ")"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Select Features for Modeling\n",
+    "Next, we create a new feature list where we remove the features `delinq_2yrs` and `addr_state` and add the modified features we just created."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "feature_list_name = \"new_feature_list\"\n",
+    "\n",
+    "new_feature_list = proj.create_featurelist(\n",
+    "    feature_list_name,\n",
+    "    list((set(raw.features) - {\"samplegroup\"}) |\n",
+    "         {\"samplegroup(int)\"})\n",
+    ")"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Run the Automated Modeling Process\n",
+    "Now we can start the modeling process. The target for this problem is called `recommend` - a categorical variable indicating whether or not the customer would not only take up the offer, but will also promote them on online media.\n",
+    "\n",
+    "We specify that the metric that should be used is `LogLoss`. Without a specification DataRobot would automatically select an appropriate default metric.\n",
+    "\n",
+    "The `featurelist_id` parameter tells DataRobot to model on that specific featurelist, rather than the default `Informative Features`.\n",
+    "\n",
+    "Finally, the `worker_count` parameter specifies how many workers should be used for this project. Passing a value of `-1` tells DataRobot to set the worker count to the maximum available to you. You can also specify the exact number of workers to use, but this command will fail if you request more workers than your account allows. If you need more resources than what has been allocated to you, you should think about upgrading your license.\n",
+    "\n",
+    "The last command in this cell is just a blocking loop that periodically checks on the project to see if it is done, printing out the number of jobs in progress and in the queue along the way so you can see progress. The automated model exploration process will occasionally add more jobs to the queue, so don't be alarmed if the number of jobs does not strictly decrease over time."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "outputs": [
+    {
+     "name": "stdout",
+     "text": [
+      "In progress: 15, queued: 0 (waited: 0s)\n",
+      "In progress: 15, queued: 0 (waited: 1s)\n",
+      "In progress: 15, queued: 0 (waited: 2s)\n",
+      "In progress: 15, queued: 0 (waited: 3s)\n",
+      "In progress: 15, queued: 0 (waited: 5s)\n",
+      "In progress: 15, queued: 0 (waited: 7s)\n",
+      "In progress: 15, queued: 0 (waited: 11s)\n",
+      "In progress: 15, queued: 0 (waited: 18s)\n",
+      "In progress: 13, queued: 0 (waited: 31s)\n",
+      "In progress: 5, queued: 0 (waited: 52s)\n",
+      "In progress: 1, queued: 0 (waited: 72s)\n",
+      "In progress: 15, queued: 0 (waited: 93s)\n",
+      "In progress: 15, queued: 0 (waited: 114s)\n",
+      "In progress: 10, queued: 0 (waited: 134s)\n",
+      "In progress: 4, queued: 0 (waited: 155s)\n",
+      "In progress: 2, queued: 0 (waited: 175s)\n",
+      "In progress: 1, queued: 0 (waited: 195s)\n",
+      "In progress: 8, queued: 0 (waited: 219s)\n",
+      "In progress: 8, queued: 0 (waited: 240s)\n",
+      "In progress: 8, queued: 0 (waited: 261s)\n",
+      "In progress: 4, queued: 0 (waited: 281s)\n",
+      "In progress: 2, queued: 0 (waited: 302s)\n",
+      "In progress: 2, queued: 0 (waited: 322s)\n",
+      "In progress: 2, queued: 0 (waited: 342s)\n",
+      "In progress: 1, queued: 0 (waited: 363s)\n",
+      "In progress: 1, queued: 0 (waited: 383s)\n",
+      "In progress: 20, queued: 12 (waited: 404s)\n",
+      "In progress: 19, queued: 6 (waited: 425s)\n",
+      "In progress: 14, queued: 0 (waited: 446s)\n",
+      "In progress: 12, queued: 0 (waited: 467s)\n",
+      "In progress: 9, queued: 0 (waited: 487s)\n",
+      "In progress: 7, queued: 0 (waited: 508s)\n",
+      "In progress: 4, queued: 0 (waited: 529s)\n",
+      "In progress: 2, queued: 0 (waited: 549s)\n",
+      "In progress: 0, queued: 0 (waited: 570s)\n",
+      "In progress: 5, queued: 0 (waited: 590s)\n",
+      "In progress: 1, queued: 0 (waited: 611s)\n",
+      "In progress: 1, queued: 0 (waited: 631s)\n",
+      "In progress: 0, queued: 1 (waited: 651s)\n",
+      "In progress: 1, queued: 0 (waited: 672s)\n",
+      "In progress: 1, queued: 0 (waited: 693s)\n",
+      "In progress: 1, queued: 0 (waited: 713s)\n",
+      "In progress: 1, queued: 0 (waited: 734s)\n",
+      "In progress: 1, queued: 0 (waited: 754s)\n",
+      "In progress: 6, queued: 0 (waited: 775s)\n",
+      "In progress: 6, queued: 0 (waited: 795s)\n",
+      "In progress: 5, queued: 0 (waited: 816s)\n",
+      "In progress: 4, queued: 0 (waited: 836s)\n",
+      "In progress: 3, queued: 0 (waited: 856s)\n",
+      "In progress: 2, queued: 0 (waited: 877s)\n",
+      "In progress: 2, queued: 0 (waited: 898s)\n",
+      "In progress: 2, queued: 0 (waited: 918s)\n",
+      "In progress: 0, queued: 0 (waited: 939s)\n",
+      "In progress: 0, queued: 0 (waited: 959s)\n"
+     ],
+     "output_type": "stream"
+    }
+   ],
+   "source": [
+    "proj.set_target(\n",
+    "    \"recommend\",\n",
+    "    mode=dr.enums.AUTOPILOT_MODE.FULL_AUTO,\n",
+    "    metric=\"LogLoss\",\n",
+    "    #featurelist_id=new_feature_list.id,\n",
+    "    worker_count=-1\n",
+    ")\n",
+    "\n",
+    "proj.wait_for_autopilot()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Exploring Trained Models\n",
+    "\n",
+    "We can see how many models DataRobot built for this project by querying. Each of them has been tuned individually. Models that appear to have the same name differ either in the amount of data used in training or in the preprocessing steps used (or both)."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "outputs": [
+    {
+     "name": "stdout",
+     "text": [
+      "[0]: 0.68254 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (16 leaves)\n[1]: 0.68281 - ENET Blender\n[2]: 0.68304 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (16 leaves)\n[3]: 0.68319 - AVG Blender\n[4]: 0.68364 - TF Blender\n[5]: 0.68429 - ENET Blender\n[6]: 0.68435 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (16 leaves)\n[7]: 0.68448 - Advanced AVG Blender\n[8]: 0.68473 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (16 leaves)\n[9]: 0.6857 - eXtreme Gradient Boosted Trees Classifier with Early Stopping\n[10]: 0.68858 - Gradient Boosted Trees Classifier with Early Stopping\n[11]: 0.69032 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (16 leaves)\n[12]: 0.69141 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (64 leaves)\n[13]: 0.69352 - TensorFlow Neural Network Classifier\n[14]: 0.6946 - eXtreme Gradient Boosted Trees Classifier with Early Stopping\n[15]: 0.69546 - RandomForest Classifier (Gini)\n[16]: 0.69646 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (64 leaves)\n[17]: 0.69898 - Gradient Boosted Trees Classifier with Early Stopping\n[18]: 0.70154 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (16 leaves)\n[19]: 0.70191 - RandomForest Classifier (Gini)\n[20]: 0.70315 - eXtreme Gradient Boosted Trees Classifier with Early Stopping\n[21]: 0.70458 - RandomForest Classifier (Gini)\n[22]: 0.70469 - RandomForest Classifier (Gini)\n[23]: 0.70706 - TensorFlow Neural Network Classifier\n[24]: 0.71013 - LGBM Blender\n[25]: 0.71145 - Gradient Boosted Trees Classifier with Early Stopping\n[26]: 0.71553 - RandomForest Classifier (Gini)\n[27]: 0.7173 - RandomForest Classifier (Gini)\n[28]: 0.71804 - TensorFlow Neural Network Classifier\n[29]: 0.7181 - Light Gradient Boosted Trees Classifier with Early Stopping (SoftMax Loss) (64 leaves)\n[30]: 0.72418 - Stochastic Gradient Descent Classifier\n[31]: 0.72441 - Stochastic Gradient Descent Classifier\n[32]: 0.73154 - Stochastic Gradient Descent Classifier\n[33]: 0.7587 - Regularized Logistic Regression (L2)\n[34]: 0.75918 - Stochastic Gradient Descent Classifier\n[35]: 0.76256 - Regularized Logistic Regression (L2)\n[36]: 0.76344 - Stochastic Gradient Descent Classifier\n[37]: 0.77188 - Decision Tree Classifier (Gini)\n[38]: 0.77878 - ExtraTrees Classifier (Gini)\n[39]: 0.79904 - Vowpal Wabbit Classifier\n[40]: 0.79953 - Stochastic Gradient Descent Classifier\n[41]: 0.80638 - ExtraTrees Classifier (Gini)\n[42]: 0.80826 - Decision Tree Classifier (Gini)\n[43]: 0.80992 - Stochastic Gradient Descent Classifier\n[44]: 0.81613 - Vowpal Wabbit Classifier\n[45]: 1.02987 - Majority Class Classifier\n[46]: 1.03098 - Majority Class Classifier\n"
+     ],
+     "output_type": "stream"
+    }
+   ],
+   "source": [
+    "models = proj.get_models()\n",
+    "for idx, model in enumerate(models):\n",
+    "    print('[{}]: {} - {}'.\n",
+    "          format(idx, model.metrics['LogLoss']['validation'],\n",
+    "                 model.model_type))"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Generating Predictions\n",
+    "\n",
+    "### Predictions: modeling workers vs. dedicated servers\n",
+    "There are two ways to generate predictions in DataRobot: using modeling workers and dedicated prediction servers. In this notebook we will use the former, which is slower, occupies one of your modeling worker slots, and has no strong latency guarantees because the jobs go through the project queue. This method can be useful for developing and evaluating models. However, in a production environment, a faster, dedicated prediction server configuration may be more appropriate.\n",
+    "\n",
+    "### Three step process\n",
+    "As just mentioned, these predictions go through the modeling queue, so there is a three-step process. The first step is to upload your dataset; the second is to generate prediction jobs. Finally, you need to retreive your predictions when the job is done.\n",
+    "\n",
+    "To simplify this example we will make predictions for the same data used to train the models. We could use any of the models DataRobot generated, but will select the model that DataRobot recommends for deployment. DataRobot weighs both model accuracy and runtime to develop this recommendation.\n",
+    "\n",
+    "In practice, you would likely have a separate \"test\" or \"validation\" data set to use here"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "outputs": [],
+   "source": [
+    "dataset = proj.upload_dataset(filename)\n",
+    "\n",
+    "model = dr.ModelRecommendation.get(\n",
+    "    proj.id,\n",
+    "    dr.enums.RECOMMENDED_MODEL_TYPE.RECOMMENDED_FOR_DEPLOYMENT\n",
+    ").get_model()\n",
+    "\n",
+    "pred_job = model.request_predictions(dataset.id)\n",
+    "preds = pred_job.get_result_when_complete()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "  prediction  row_id  class_negative  class_passive  class_positive\n0   positive       0        0.011749       0.063665        0.924587\n1   positive       1        0.042141       0.085871        0.871989\n2   positive       2        0.022168       0.064771        0.913062\n3   positive       3        0.011842       0.094395        0.893763\n4   positive       4        0.024423       0.154742        0.820836",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>prediction</th>\n      <th>row_id</th>\n      <th>class_negative</th>\n      <th>class_passive</th>\n      <th>class_positive</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>positive</td>\n      <td>0</td>\n      <td>0.011749</td>\n      <td>0.063665</td>\n      <td>0.924587</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>positive</td>\n      <td>1</td>\n      <td>0.042141</td>\n      <td>0.085871</td>\n      <td>0.871989</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>positive</td>\n      <td>2</td>\n      <td>0.022168</td>\n      <td>0.064771</td>\n      <td>0.913062</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>positive</td>\n      <td>3</td>\n      <td>0.011842</td>\n      <td>0.094395</td>\n      <td>0.893763</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>positive</td>\n      <td>4</td>\n      <td>0.024423</td>\n      <td>0.154742</td>\n      <td>0.820836</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 12
+    }
+   ],
+   "source": [
+    "preds.head()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "### Results\n",
+    "This example is a multi-class classification problem, so DataRobot builds several \"one-vs-all\" models under the hood and presents the binary classification predictions for each class. In this example, for each row, we see the probability the record is `class_negative`, `class_passive`, and `class_positive`. The simplest method to choose the predictied class is to simply take the highest probability class as the result. The predictions can be matched to the the uploaded prediction data set through the `row_id` predictions field. \n",
+    "\n",
+    "To get more control over the individual class predictions, you can use the API to launch one DataRobot project per class and tune each model individually. See the example file for this method."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "preds.head()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.6"
+  },
+  "pycharm": {
+   "stem_cell": {
+    "cell_type": "raw",
+    "source": [],
+    "metadata": {
+     "collapsed": false
+    }
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
