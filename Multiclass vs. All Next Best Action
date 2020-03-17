@@ -1,0 +1,1029 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Best Next Action Project Overview\n",
+    "\n",
+    "Banks make a margin on every credit card transaction that is made by their customers. So they want their customers to spend more on their credit cards. In order to increase credit card spending, the bank sends marketing messages to their customers to encourage those customers to use their credit cards more. These messages may be sent via email, mail or SMS. The messages may be retail discount offers, holiday destinations or gift ideas.\n",
+    "\n",
+    "But with a large pool of customers and range of communication channels and messages, how does the bank know who to target with which channel and which message? Traditionally, marketers apply customer segmentation across the entire customer database. However, every customer is unique. Some organizations send the same messages to all customers or to all customers in a segment, but this might be seen as annoying SPAM and push customers away.\n",
+    "\n",
+    "The solution is to develop a targeted Next Best Action for each individual customer, which is which channel and message to send next to each individual. Sometimes the next best action is to send nothing.\n",
+    "\n",
+    "\n",
+    "## Classification Problems In DataRobot\n",
+    "\n",
+    "The problem described above is a classification problem.  In DataRobot, we characterize classifications problem in 1 of 3 ways. \n",
+    "\n",
+    "1.  Binary Classification: 2 classes\n",
+    "2.  Multiclass: 3-10 classes\n",
+    "3.  Extended Multiclass: 11 to 100 classes.  \n",
+    "\n",
+    "## Installing the `datarobot` package\n",
+    "The `datarobot` package is hosted on PyPI. You can install it via:\n",
+    "```\n",
+    "pip install datarobot\n",
+    "```\n",
+    "from the command line. Its main dependencies are `numpy` and `pandas`, which could take some time to install on a new system. We highly recommend use of virtualenvs to avoid conflicts with other dependencies in your system-wide python installation."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Load Required Packages\n",
+    "Here, we import the required packages for this project. By convention, we always import `datarobot` with the alias `dr`."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "outputs": [],
+   "source": [
+    "import datetime\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import seaborn as sns\n",
+    "from matplotlib import colors\n",
+    "from scipy import interp\n",
+    "import matplotlib.pyplot as plt\n",
+    "import matplotlib.ticker as mtick\n",
+    "import datarobot as dr"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "### Configure the Python Client\n",
+    "Configuring the client requires the following two things:\n",
+    "\n",
+    "- A DataRobot endpoint - where the API server can be found\n",
+    "- A DataRobot API token - a token the server uses to identify and validate the user making API requests\n",
+    "\n",
+    "The endpoint is usually the URL you would use to log into the DataRobot Web User Interface (e.g., https://app.datarobot.com) with \"/api/v2/\" appended, e.g., (https://app.datarobot.com/api/v2/).\n",
+    "\n",
+    "You can find your API token by logging into the DataRobot Web User Interface and looking under `API Key Management`.\n",
+    "\n",
+    "The Python client can be configured in several ways. The example we'll use in this notebook is to point to a `yaml` file that has the information. This is a text file containing two lines like this:\n",
+    "```yaml\n",
+    "endpoint: https://app.datarobot.com/api/v2/\n",
+    "token: not-my-real-token\n",
+    "```\n",
+    "Or, for unix based systems, create a file at `~/.config/datarobot/drconfig.yaml` containing two lines like this:\n",
+    "```\n",
+    "token: yourtoken\n",
+    "endpoint: https://app.datarobot.com/api/v2\n",
+    "```\n",
+    "\n",
+    "If you want to run this notebook without changes, please save your file at `~/.config/datarobot/drconfig.yaml`"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "<datarobot.rest.RESTClientObject at 0x1207ff090>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 2
+    }
+   ],
+   "source": [
+    "# Connect to DataRobot\n",
+    "\n",
+    "# Initialization with arguments\n",
+    "# dr.Client(token='<API TOKEN>', endpoint='https://<YOUR ENDPOINT>/api/v2/')\n",
+    "\n",
+    "# Initialization with a config file in the same directory as this notebook\n",
+    "# dr.Client(config_path='drconfig.yaml')\n",
+    "\n",
+    "# Initialization with a config file located at\n",
+    "# ~/.config/datarobot/dr.config.yaml\n",
+    "dr.Client()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% \n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Look at the Data Dictionary, Read in the Data, and Perform Exploratory Data Analysis\n",
+    "\n",
+    "Note: please ensure you have the optional dependant package `xlrd` installed\n",
+    "\n",
+    "Data Dictionary:"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "outputs": [
+    {
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-1-911fa156e8f5>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdata_dict\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mread_excel\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"DR_Demo_Next_Best_Action_Data_Dictionary.xlsx\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0mdata_dict\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mset_index\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"Feature\"\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minplace\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mTrue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"Fields in the data set\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      4\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0midx\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mdata_dict\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      5\u001b[0m     \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0midx\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\":\"\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdata_dict\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mloc\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0midx\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"Description\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNameError\u001b[0m: name 'pd' is not defined"
+     ],
+     "ename": "NameError",
+     "evalue": "name 'pd' is not defined",
+     "output_type": "error"
+    }
+   ],
+   "source": [
+    "data_dict = pd.read_excel(\"DR_Demo_Next_Best_Action_Data_Dictionary.xlsx\")\n",
+    "data_dict.set_index(\"Feature\", inplace=True)\n",
+    "print(\"Fields in the data set\")\n",
+    "for idx in data_dict.index:\n",
+    "    print(idx,\":\", data_dict.loc[idx][\"Description\"])"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Read in the data and get some basic info"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "outputs": [
+    {
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-2-e48e6cd32b5f>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdf\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mread_csv\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"DR_Demo_Next_Best_Action.csv\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mhead\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      4\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNameError\u001b[0m: name 'pd' is not defined"
+     ],
+     "ename": "NameError",
+     "evalue": "name 'pd' is not defined",
+     "output_type": "error"
+    }
+   ],
+   "source": [
+    "df = pd.read_csv(\"DR_Demo_Next_Best_Action.csv\")\n",
+    "\n",
+    "df.head()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "And we get some descriptive statistics."
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "                age         income      aveSpend  nTouchpoints\ncount  20000.000000   20000.000000  20000.000000  20000.000000\nmean      39.203100   71504.298145    730.573514      2.276000\nstd        9.276807   36607.960695   2221.160837      2.299497\nmin       20.000000   10000.000000      0.000000      0.000000\n25%       32.000000   45000.000000     20.830000      0.750000\n50%       38.000000   64000.000000     93.250000      1.000000\n75%       46.000000   89813.000000    427.500000      4.000000\nmax       60.000000  249000.000000  18156.700000      8.000000",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>age</th>\n      <th>income</th>\n      <th>aveSpend</th>\n      <th>nTouchpoints</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>count</th>\n      <td>20000.000000</td>\n      <td>20000.000000</td>\n      <td>20000.000000</td>\n      <td>20000.000000</td>\n    </tr>\n    <tr>\n      <th>mean</th>\n      <td>39.203100</td>\n      <td>71504.298145</td>\n      <td>730.573514</td>\n      <td>2.276000</td>\n    </tr>\n    <tr>\n      <th>std</th>\n      <td>9.276807</td>\n      <td>36607.960695</td>\n      <td>2221.160837</td>\n      <td>2.299497</td>\n    </tr>\n    <tr>\n      <th>min</th>\n      <td>20.000000</td>\n      <td>10000.000000</td>\n      <td>0.000000</td>\n      <td>0.000000</td>\n    </tr>\n    <tr>\n      <th>25%</th>\n      <td>32.000000</td>\n      <td>45000.000000</td>\n      <td>20.830000</td>\n      <td>0.750000</td>\n    </tr>\n    <tr>\n      <th>50%</th>\n      <td>38.000000</td>\n      <td>64000.000000</td>\n      <td>93.250000</td>\n      <td>1.000000</td>\n    </tr>\n    <tr>\n      <th>75%</th>\n      <td>46.000000</td>\n      <td>89813.000000</td>\n      <td>427.500000</td>\n      <td>4.000000</td>\n    </tr>\n    <tr>\n      <th>max</th>\n      <td>60.000000</td>\n      <td>249000.000000</td>\n      <td>18156.700000</td>\n      <td>8.000000</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 5
+    }
+   ],
+   "source": [
+    "df.describe()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Create a frequency plot of the target variable and print the frequencies for reference"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "<matplotlib.axes._subplots.AxesSubplot at 0x1207af450>"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 6
+    },
+    {
+     "data": {
+      "text/plain": "<Figure size 864x576 with 1 Axes>",
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAs8AAAItCAYAAADG/pc+AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAADh0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uMy4xLjIsIGh0dHA6Ly9tYXRwbG90bGliLm9yZy8li6FKAAAgAElEQVR4nOzdeZhkZX3+//ftIIjLuE6iYXFQccEFDAMuMcS4QlAwCgpu6NeI0ZBETVSMERQ1oiYxCRojLogr7hFlFFfcFwZFNsPPEYmCJKIoEhV09PP745y2a3q6p5/BmT41c96v66pr6jznnOJTRVf3XaeeJVWFJEmSpMVdZ+gCJEmSpK2F4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqtN3QBWyKW9ziFrVy5cqhy5AkSdI27KyzzvpBVa2Yb99WFZ5XrlzJmjVrhi5DkiRJ27Ak/73QPrttSJIkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUaLuhC5AkSdK2YeXRpw1dAgAXH3/gFnvspivPSfZPcmGStUmOnmf/M5NckOScJJ9IcuuJfUck+WZ/O2Kife8k5/aP+W9JsnmekiRJkrRlLBqekywDXg0cAOwBHJ5kjzmHfQ1YVVV3A94DvLw/92bAscA9gH2BY5PctD/nNcCTgd372/6/9bORJEmStqCWK8/7Amur6qKq+gVwCnDw5AFV9amq+lm/+SVg5/7+g4GPVdUVVfUj4GPA/kluBSyvqi9VVQFvBh62GZ6PJEmStMW0hOedgO9ObF/Sty3kScCHFzl3p/5+62NKkiRJg9usAwaTPBZYBfzRZnzMI4EjAXbdddfN9bCSJEnSJmu58nwpsMvE9s5923qSPAB4HnBQVV2zyLmXMtu1Y8HHBKiqE6tqVVWtWrFiRUO5kiRJ0pbREp7PBHZPsluS7YHDgFMnD0hyd+C1dMH5+xO7TgcelOSm/UDBBwGnV9VlwE+S3LOfZePxwAc2w/ORJEmStphFu21U1bokR9EF4WXAG6vq/CTHAWuq6lTgFcANgXf3M859p6oOqqorkryILoADHFdVV/T3nwa8CdiRro/0h5EkSZKmWFOf56paDaye03bMxP0HbOTcNwJvnKd9DXCX5kolSZKkgbk8tyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktRou6EL0HBWHn3a0CVw8fEHDl2CJElSM688S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNWoKz0n2T3JhkrVJjp5n/35JvppkXZJDJtr/OMnZE7erkzys3/emJN+e2LfX5ntakiRJ0ua33WIHJFkGvBp4IHAJcGaSU6vqgonDvgM8AfjbyXOr6lPAXv3j3AxYC3x04pBnVdV7fpsnIEmSJC2VRcMzsC+wtqouAkhyCnAw8JvwXFUX9/t+vZHHOQT4cFX97FpXK0mSJA2opdvGTsB3J7Yv6ds21WHAO+a0vSTJOUlemWSHa/GYkiRJ0pJZkgGDSW4F3BU4faL5ucAdgX2AmwHPWeDcI5OsSbLm8ssv3+K1SpIkSQtpCc+XArtMbO/ct22KRwLvr6pfzjRU1WXVuQY4ia57yAaq6sSqWlVVq1asWLGJ/1lJkiRp82kJz2cCuyfZLcn2dN0vTt3E/87hzOmy0V+NJkmAhwHnbeJjSpIkSUtq0fBcVeuAo+i6XHwDeFdVnZ/kuCQHASTZJ8klwKHAa5OcP3N+kpV0V64/Peeh35bkXOBc4BbAi3/7pyNJkiRtOS2zbVBVq4HVc9qOmbh/Jl13jvnOvZh5BhhW1f02pVBJkiRpaK4wKEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1Gi7oQuQJGlrsfLo04YuAYCLjz9w6BKk0fLKsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktSoKTwn2T/JhUnWJjl6nv37JflqknVJDpmz71dJzu5vp06075bky/1jvjPJ9r/905EkSZK2nEXDc5JlwKuBA4A9gMOT7DHnsO8ATwDePs9D/Lyq9upvB020vwx4ZVXdDvgR8KRrUb8kSZK0ZFquPO8LrK2qi6rqF8ApwMGTB1TVxVV1DvDrlv9okgD3A97TN50MPKy5akmSJGkALeF5J+C7E9uX9G2trpdkTZIvJZkJyDcHflxV667lY0qSJElLbilWGLx1VV2a5DbAJ5OcC1zZenKSI4EjAXbdddctVKIkSZK0uJYrz5cCu0xs79y3NamqS/t/LwLOAO4O/BC4SZKZ8L7gY1bViVW1qqpWrVixovU/K0mSJG12LeH5TGD3fnaM7YHDgFMXOQeAJDdNskN//xbAHwAXVFUBnwJmZuY4AvjAphYvSZIkLaVFw3PfL/ko4HTgG8C7qur8JMclOQggyT5JLgEOBV6b5Pz+9DsBa5J8nS4sH19VF/T7ngM8M8lauj7Qb9icT0ySJEna3Jr6PFfVamD1nLZjJu6fSdf1Yu55XwDuusBjXkQ3k4ckSZK0VXCFQUmSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElq1BSek+yf5MIka5McPc/+/ZJ8Ncm6JIdMtO+V5ItJzk9yTpJHTex7U5JvJzm7v+21eZ6SJEmStGVst9gBSZYBrwYeCFwCnJnk1Kq6YOKw7wBPAP52zuk/Ax5fVd9M8nvAWUlOr6of9/ufVVXv+W2fhCRJkrQUFg3PwL7A2qq6CCDJKcDBwG/Cc1Vd3O/79eSJVfX/Tdz/XpLvAyuAHyNJkiRtZVq6bewEfHdi+5K+bZMk2RfYHvjWRPNL+u4cr0yyw6Y+piRJkrSUlmTAYJJbAW8BnlhVM1ennwvcEdgHuBnwnAXOPTLJmiRrLr/88qUoV5IkSZpXS3i+FNhlYnvnvq1JkuXAacDzqupLM+1VdVl1rgFOousesoGqOrGqVlXVqhUrVrT+ZyVJkqTNriU8nwnsnmS3JNsDhwGntjx4f/z7gTfPHRjYX40mSYCHAedtSuGSJEnSUls0PFfVOuAo4HTgG8C7qur8JMclOQggyT5JLgEOBV6b5Pz+9EcC+wFPmGdKurclORc4F7gF8OLN+swkSZKkzaxltg2qajWwek7bMRP3z6TrzjH3vLcCb13gMe+3SZVKkiRJA3OFQUmSJKmR4VmSJElq1NRtY1uy8ujThi6Bi48/cOgSJEmSdC145VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEbbDV2ANLSVR582dAkAXHz8gUOXIEmSFuGVZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEaGZ0mSJKmR4VmSJElqZHiWJEmSGhmeJUmSpEZN4TnJ/kkuTLI2ydHz7N8vyVeTrEtyyJx9RyT5Zn87YqJ97yTn9o/5b0ny2z8dSZIkactZNDwnWQa8GjgA2AM4PMkecw77DvAE4O1zzr0ZcCxwD2Bf4NgkN+13vwZ4MrB7f9v/Wj8LSZIkaQls13DMvsDaqroIIMkpwMHABTMHVNXF/b5fzzn3wcDHquqKfv/HgP2TnAEsr6ov9e1vBh4GfPi3eTKSJElLbeXRpw1dAgAXH3/g0CWMQku3jZ2A705sX9K3tVjo3J36+4s+ZpIjk6xJsubyyy9v/M9KkiRJm9/UDxisqhOralVVrVqxYsXQ5UiSJGnEWsLzpcAuE9s7920tFjr30v7+tXlMSZIkaRAt4flMYPckuyXZHjgMOLXx8U8HHpTkpv1AwQcBp1fVZcBPktyzn2Xj8cAHrkX9kiRJ0pJZNDxX1TrgKLog/A3gXVV1fpLjkhwEkGSfJJcAhwKvTXJ+f+4VwIvoAviZwHEzgweBpwGvB9YC38LBgpIkSZpyLbNtUFWrgdVz2o6ZuH8m63fDmDzujcAb52lfA9xlU4qVJEmShjT1AwYlSZKkaWF4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkho1heck+ye5MMnaJEfPs3+HJO/s9385ycq+/TFJzp64/TrJXv2+M/rHnNn3O5vziUmSJEmb26LhOcky4NXAAcAewOFJ9phz2JOAH1XV7YBXAi8DqKq3VdVeVbUX8Djg21V19sR5j5nZX1Xf3wzPR5IkSdpiWq487wusraqLquoXwCnAwXOOORg4ub//HuD+STLnmMP7cyVJkqStUkt43gn47sT2JX3bvMdU1TrgSuDmc455FPCOOW0n9V02nj9P2JYkSZKmypIMGExyD+BnVXXeRPNjququwB/2t8ctcO6RSdYkWXP55ZcvQbWSJEnS/FrC86XALhPbO/dt8x6TZDvgxsAPJ/YfxpyrzlV1af/vVcDb6bqHbKCqTqyqVVW1asWKFQ3lSpIkSVtGS3g+E9g9yW5JtqcLwqfOOeZU4Ij+/iHAJ6uqAJJcB3gkE/2dk2yX5Bb9/esCDwHOQ5IkSZpi2y12QFWtS3IUcDqwDHhjVZ2f5DhgTVWdCrwBeEuStcAVdAF7xn7Ad6vqoom2HYDT++C8DPg48LrN8owkSZKkLWTR8AxQVauB1XPajpm4fzVw6ALnngHcc07bT4G9N7FWSZIkaVCuMChJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktTI8CxJkiQ1MjxLkiRJjQzPkiRJUiPDsyRJktRou6ELkCRJW5+VR582dAkAXHz8gUOXoJHxyrMkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUqCk8J9k/yYVJ1iY5ep79OyR5Z7//y0lW9u0rk/w8ydn97T8mztk7ybn9Of+WJJvrSUmSJElbwqLhOcky4NXAAcAewOFJ9phz2JOAH1XV7YBXAi+b2Petqtqrv/35RPtrgCcDu/e3/a/905AkSZK2vJYrz/sCa6vqoqr6BXAKcPCcYw4GTu7vvwe4/8auJCe5FbC8qr5UVQW8GXjYJlcvSZIkLaGW8LwT8N2J7Uv6tnmPqap1wJXAzft9uyX5WpJPJ/nDieMvWeQxJUmSpKmy3RZ+/MuAXavqh0n2Bv4zyZ035QGSHAkcCbDrrrtugRIlSZKkNi1Xni8FdpnY3rlvm/eYJNsBNwZ+WFXXVNUPAarqLOBbwO3743de5DHpzzuxqlZV1aoVK1Y0lCtJkiRtGS3h+Uxg9yS7JdkeOAw4dc4xpwJH9PcPAT5ZVZVkRT/gkCS3oRsYeFFVXQb8JMk9+77Rjwc+sBmejyRJkrTFLNpto6rWJTkKOB1YBryxqs5PchywpqpOBd4AvCXJWuAKuoANsB9wXJJfAr8G/ryqruj3PQ14E7Aj8OH+JkmSJE2tpj7PVbUaWD2n7ZiJ+1cDh85z3nuB9y7wmGuAu2xKsZIkSdKQXGFQkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJamR4liRJkhoZniVJkqRGhmdJkiSpkeFZkiRJarTd0AVIkqbbyqNPG7oEAC4+/sChS5CktivPSfZPcmGStUmOnmf/Dkne2e//cpKVffsDk5yV5Nz+3/tNnHNG/5hn97ff2VxPSpIkSdoSFr3ynGQZ8GrggcAlwJlJTq2qCyYOexLwo6q6XZLDgJcBjwJ+ADy0qr6X5C7A6cBOE+c9pqrWbKbnIkmSJG1RLVee9wXWVtVFVfUL4BTg4DnHHAyc3N9/D3D/JKmqr1XV9/r284Edk+ywOQqXJEmSllpLeN4J+O7E9iWsf/V4vWOqah1wJXDzOcc8AvhqVV0z0XZS32Xj+UmySZVLkiRJS2xJZttIcme6rhxPmWh+TFXdFfjD/va4Bc49MsmaJGsuv/zyLV+sJEmStICW8HwpsMvE9s5927zHJNkOuDHww357Z+D9wOOr6lszJ1TVpf2/VwFvp+sesoGqOrGqVlXVqhUrVrQ8J0mSJGmLaAnPZwK7J9ktyfbAYcCpc445FTiiv38I8MmqqiQ3AU4Djq6qz88cnGS7JLfo718XeAhw3m/3VCRJkqQta9Hw3PdhPopupoxvAO+qqvOTHJfkoP6wNwA3T7IWeCYwM53dUcDtgGPmTEm3A3B6knOAs+muXL9ucz4xSZIkaXNrWiSlqlYDq+e0HTNx/2rg0HnOezHw4gUedu/2MiVJkqThuTy3JEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1MjwLEmSJDUyPEuSJEmNDM+SJElSI8OzJEmS1KhphUFJGpuVR582dAkAXHz8gUOXIEma4JVnSZIkqZHhWZIkSWpktw1Jv2FXBUmSNs4rz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVIjw7MkSZLUyPAsSZIkNTI8S5IkSY0Mz5IkSVKjpvCcZP8kFyZZm+ToefbvkOSd/f4vJ1k5se+5ffuFSR7c+piSJEnStFk0PCdZBrwaOADYAzg8yR5zDnsS8KOquh3wSuBl/bl7AIcBdwb2B/49ybLGx5QkSZKmSsuV532BtVV1UVX9AjgFOHjOMQcDJ/f33wPcP0n69lOq6pqq+jawtn+8lseUJEmSpkpLeN4J+O7E9iV927zHVNU64Erg5hs5t+UxJUmSpKmy3dAFLCbJkcCR/eb/JblwyHqAWwA/+G0eIC/bTJUMz9dilq/FLF+LWb4Ws3wtZvlazPK1mOVrMWsaXotbL7SjJTxfCuwysb1z3zbfMZck2Q64MfDDRc5d7DEBqKoTgRMb6lwSSdZU1aqh65gGvhazfC1m+VrM8rWY5Wsxy9dilq/FLF+LWdP+WrR02zgT2D3Jbkm2pxsAeOqcY04FjujvHwJ8sqqqbz+sn41jN2B34CuNjylJkiRNlUWvPFfVuiRHAacDy4A3VtX5SY4D1lTVqcAbgLckWQtcQReG6Y97F3ABsA74i6r6FcB8j7n5n54kSZK0+TT1ea6q1cDqOW3HTNy/Gjh0gXNfAryk5TG3ElPThWQK+FrM8rWY5Wsxy9dilq/FLF+LWb4Ws3wtZk31a5Gud4UkSZKkxbg8tyRJktTI8Kxm/aDPRduksUqyQ0vbGPj7QtK2yvCsTfHeedres+RVTIEkf9DSptH5YmPbGPj7YkKSeyd5dJLHz9yGrmkI/exbj07yd0mOmbkNXdcQkg1nIp6vbQySvKWlbVpM/SIpQ0vycOBlwO8A6W9VVcsHLWwJJbkjcGfgxv3rMWM5cL1hqhrcCcDvN7Rt8/oPDS+gm1B+O2bfI7cZsq6llOSWdKuk7pjk7nSvAXTvkesPVtgA/H2xoT4E3BY4G/hV31zAmwcrajgfoFuF+CzgmoFrGdoDgefMaTtgnrYxuPPkRpJlwN4D1bIow/PiXg48tKq+MXQhA7oD8BDgJsBDJ9qvAp48SEUDSXIv4N7AiiTPnNi1nG7axTF6A/AMuj+Gv1rk2G3Vg4En0C349M8T7VcBfzdEQQPy98WGVgF7lCP0AXauqv2HLmJISZ4KPA24TZJzJnbdCPj8MFUNI8lz6X5H7pjkJzPNwC+Y4hk3DM+L+9+RB2eq6gPAB5Lcq6rG+hX0jO2BG9K9d2400f4TugWCxujKqvrw0EUMqapOBk5O8oiqmq+7wpjcu6qemOSYqjpu6GKmxHnALYHLhi5kCnwhyV2r6tyhCxnQ24EPAy8Fjp5ov6qqrhimpMF8pqpemuT4qjp68cOng1PVLSLJv9L90vtPJr5iqqr3DVbUQJKsoLtytJKJD15V9f+GqmmpJXlLVT0uydOr6l+GrmcaJDme7qr7+1j/PfLVwYoaSD848BFs+B4ZTYhMci5wN+CsqhpdN6b5JPkUsBfdCruT75GDBitqIEkuAG4HfJvutZjp5nW3QQsbSN894XdZ//fFd4araGklOauq9k7y1a3p94VXnhe3HPgZ8KCJtqILCmPzAeCzwMcZ79fzeyf5PeCJSU5mtm8rACO8agBwj/7fVRNtBdxvgFqGZn9O+AjwI+CGE1/DwgjHi0x4wdAFTJEDhi5gWvQrLb8A+F/g131z0X34HItfJjkR2CnJv83dWVV/NUBNi/LKs5olObuq9hq6jiEl+SvgqcBtgEtZPzyPapCcNpTkvKq6y9B1TIMkH6iqg4euY1ok+V1gn37zK1X1/SHrGVKSPYE/7Dc/W1VfH7KeoSRZC9yjqn44dC1DSXIL4AF0EzNsMOtK3yVu6hieF5FkZ7pZFGamIfss8NdVdclwVQ0jyYuBL/RLq49aktdU1VOHrmMaJLkxcCywX9/0aeC4qrpyuKqG0V9BOWHk/Tk1R5JHAq8AzqD7wP2HwLOqanRT9yX5a7rufzPf3v4pcGJVnTBcVcPou/M8sKrWDV3L0JLsuTV9iDI8LyLJx+g698/MN/hY4DFV9cDhqhpGkquAG9B9Hf1LRvg1bJLlVfWTJDebb/8Yu20keS/dgKiZKwSPA/asqocvfNa2yf6ckORzVXWf/vdF0b8GjPD3xYwkX6cLSd/vt1cAH6+qPYetbOn1s0vcq6p+2m/fAPjimN4jM5K8gW52mtNYvy/8Py940jYmybOr6uVJTqD7PbGeae22YZ/nxa2oqpMmtt+U5OmDVTOgqrrR4kdt895ONw3XWcwGghlF151jbG5bVY+Y2H5hkrMHq2ZYo+/PWVX36f/198Ws68zppvFDxrtIWVh/zMyvmDN2ZES+09+2729jNDOb2ZpBq9hEhufF/TDJY4F39NuH0/3iG50k+83XXlWfWepahlJVD+n/dZnhWT9Pcp+q+hz8ZtGUnw9c01D8Kq+3wLczV1XVL5e8mOF9JMnpzP4deRQw1u5vJwFfTvL+fvthdHPFj05VvXDoGoZWVR/s/2GBQSEAABuBSURBVJ3Kvs0LsdvGIpLcmq7P873o/jB+AfirMU0lMyPJByc2rwfsSzcd1ehmVUgy35Q6VwL/Pbb+a0n2ouuycWO6K0hXAE/YmvqvbS79NG0z30hcD9gNuLCq7rzRE7dBSS4GdqGbeSN0i6b8D93MAk+uqrOGq27pJXkEE2Nnqur9Gzt+W9b//rxPv/nZqvrakPUMpe/zPF9XhTH+Tf0gG74WV9JdkX5tVV299FUtzPCsay3JLsC/zPnKfhSSfIluKe5z6ILBXen6/d4YeGpVfXTA8gaRZDlAVf1ksWPHog8JT6uqPxu6lqWW5HXAe6rq9H77QXRzYJ8E/GtV3WNj52vb4niRDSWZXH76enTvj3VV9eyBShpMv6bGCtb/duYndIF6eVU9bqja5mN4XsDW2ol9KSUJcH5V7TF0LUstyfuA51fV+f32HsBxwLOB941hSr8kj62qt85Zpvw3xjToZWOSnFtVdx26jqU23/NOck5V3W0s017OM3jyN7sY2eDJJB+qqock+TbzvxZjHC+ygSRfqap9h65jqSU5s6r2ma8tyfnT9u2dfZ4XtlV2Yt+S5nyQuA7dilmjW0Wud/uZ4AxQVRckuWNVXdR9phiFG/T/zjcwbJSfyud8kLgO3bcT3xuonKFdluQ5wCn99qOA/+1XVPv1wqdtOxw8OcvxIhuacxX+OsDedN9ejtENk+w60yU2ya7ADft9vxiurPkZnhcw04kd+FlVvXtyX5JDByhpGkx+kFgHvKOqPj9UMQM7P8lrWD8YXNAvzzyKAVFV9dr+7sfn/hz0gwbHaDIkraObguq9A9UytEfTzf/9n3Qfpj7fty0DHjlgXUsuyVvmfu08X9sYJPlEVd1/sbaRmJy1aR3dFJdPGrSi4fwN8Lkk36J7PXYDntZPZTh1gwnttrGI+dZb39rWYN+ckmwP3L7fvHCkI+dJsiPwNGYHvXwe+HfgauD6VfV/Q9W21HyPbCjJDQHG9HOghc19PyTZDjhnTF3eklwPuD7wKeC+zE5Ptxz4SFXdcaDSNCX6i08zPwcXTtsgwUleeV5AkgOAP2HD9daX031CHJ0k96X7BHgx3S++XZIcMaap6mZU1c+Bf+pvc40iMCW5F3BvYMWc7grL6a4ujk6Su9AtqHSzfvsHwBFVdd6ghWkQSZ4L/B2wY5KZgbSh+xr6xMEKG8ZTgKcDv0d3xXUmPP8EeNVQRQ0pyXWBpzK7OusZdDNLjPKiVFVdA2wVszR55XkBSfak69N7HOuvt34V8Kmq+tEghQ0oyVnAo6vqwn779nRdN/be+JnaFiX5I7orSH8O/MfErquAD1bVN4eoa0hJvgA8r6o+1W/fF/iHqrr3oIVpUEleWlXPHbqOaZDkL8e4FPd8krweuC7rr876qzHOzrO1MTwvIsl1x/opcK6ZkfKLtWlckty6qv576DqmQZKvz11yeb42jUuSPwU+WVVX9ts3Ae5bVf85bGXD6L+h2YNuejYAqurNw1U0DH9fbL3strG4lUleyoZv9DFOq7Om/6T81n77MTgbieBnSV4B3Jn13yOjm+gfuCjJ8+m6bgA8FrhowHqW3ELTe84Y6TSfx04uilJVP04yM5hyVPrnfV+6v6mr6Za0/xwwuvAM/CrJbavqWwBJbsP6S5ePRj/I/Oyq+mm/qvPv080HP5UXZgzPizuJbsT4K4E/Bp5IN6XMGD0V+Atg5o/fZ+kGyY3GAqsg/UZVHbSE5UyLtwHvBB5C14XjCODyQSsazv8DXgi8j+7n5LN925j4gXpD8/3NGOvf30OAPYGvVdUTk/wusxdkxuZZwKeSXETXB/zWdBljjF4D7Nl3mf0b4PV0H6j+aNCqFmC3jUUkOauq9p6c8H+mbejallo/ZczVVfWrfnsZsENV/WzYypZO3893QVX16aWqZVpMvEd+04VnvgnvpbFK8kbgx8Cr+6a/AG5WVU8YrKiBzCwC0o+h+WO6MRLfGOtsG/0ME3foNy/sB82NzsyMNEmOAS6tqjdM86xNY/3kuymuSXId4JtJjgIuZXbi7rH5BPAAZmeT2BH4KN2MC6MwxnDcYGZMwGVJDqRbFGTeJXi3dUk+BhxaVT/ut28KnFJVDx62sqWT5F+q6ukLfUsz0m9n/hJ4Pt03NAAfowvQY7Sm7/P9OrpZN/4P+OKwJQ0jyV8Ab6uqc/rtmyZ5UlWN6hvd3lX97DSPBfbrc9d1B65pQV55XkSSfehWG7wJ8CK61X9eXlVfGrSwAcy3pO5YltmdkeRdVfXIJOcyfzAY3eDJJA+h656wC3AC3VR1L6yqUwctbABJvlZVd1+sbVuWZO+qOmuhb2n8AKoZSVYCy2fC49gs8Dd1VL8vZiS5Jd0iSmdW1Wf7FQbvO60DSQ3Papbk88BfVtVX++29gVdV1b2GrWzpJLlVVV2W5Nbz7Z/WwQ1aGv1X0X86scTsrYH3T+tXj1oaSVYAz8ZBtQAk2Ymuf+9vvv0e43oB/UWYu1UfxPqukOdU1Z2HrWw4SZaz/s/FFQOWsyC7bSyin8v4WWz4Rh/jL72nA+9O8j26wQ23pFuWejSq6rL+X0Nyrw8GTwZWsv57ZGwD5QCeR7fE7Kfp3iN/CBw5bEnDSLI74ExFHQfV9pK8jO7vxgXMzixRwOjCM/AR4J1JXttvP6VvG50kT6EbbH01s9/qFjCVvy+88ryIJF+nWwDiLCamkKmqswYrakD9ikiTgxtGOQd2knvSdVG4E7A93Yp6P62q5YMWNoB+YZDPsuF75L2DFTWgJLcA7tlvfqmqfjBkPUNJ8jlmZyp6KP1MRVV1zEZP3AY5qHZWkgvprraOcmDcpL5f75F0Y4mg6wv/+plB+WOS5JvAvbaW35deeV7cuqp6zdBFTIMkhwIfqarzkvw98PtJXjzTjWNkXgUcBrwbWAU8Hrj9oBUN5/pV9Zyhi5gGE3OVfqifq/TvkkztXKVb2I5V9Ykk6Z//C/puLaMLzziodtJFdAPBRh+eq+rXdBfn/iPJzYCdxxice98CtpqZuwzPi/tgkqcB72fizT6t/XC2sOdX1buT3Ae4P/CPdHMz3mPYsoZRVWuTLOt/2Z2U5GvAGJfg/VCSP6mq1UMXMgUm5yp9JvAGpniu0i3MmYpmvTjJjenmr50ZVPuMYUsazM+As5N8gvX/po5u8ZwkZwAH0WWxs4DvJ/lCVY3xZ+O5wBeSfJmt4OfCbhuLSPLteZprjP32ZkYB9ysunltVbx/xyODP0H3V9nrgf4DLgCeMcVnVJFcBN6D7hfdLur6+NdIuLFvVXKVbkjMVaT5JjpivvapOXupahjbxN/XPgF2q6tjJrj1jkuQrdCtNngv8eqZ9Wn8uDM9qluRDdFePHki3dObPga+MNDDeGvg+3dePz6ALBv9eVWsHLUyD6gcKfoSuf+9+dD8jX59ZYEmSZvSzbTwIOBl4XlWdOeLwvFVdiDM8LyDJ/arqk0kePt/+qnrfUtc0tCTXB/anu+r8zSS3Au5aVR8duDQNIMkdq+q/ksx7VXWMfeG3trlKt6Qkq+hmH5k7U9HogoGcI38+/Tii5wOfq6qnJbkN8IqqesTApS25JP8AXAx8kK2gi6zheQFJXth/hXLSPLtrTNNwJVleVT/pBzRsYFp/uLekfmGQFzEbDEbXVSHJiVV1ZJJPzbO7Rjqdo3r9rArPYsOvYcc4eHL0nCNfG7O1dZE1PC8iyW5V9e3F2rZlST5UVQ/pf7iLLijOmNof7i0pyVrg4XRX4Uf9Jkpyvaq6erG2bVmSz1XVffr+35M/D6P7UDVj5jUZuo5p0A8WfAHdvN8AnwaOq6orBytqIEleNnd2nvnatmVJnl1VL09yAvNfhZ/KQXKaZXhexHyDfWbm7ByqJg2vv9p6/36qoVFb4D0yykFympXk/sDhwNxZFcbY5e29wHl0fVsBHgfsWVXzdgvcli3w+2JU/XyTPLSqPujgyVkTU+FeNTMVLvCiqvrawKXNy6nqFpDkjnRLqd54Tr/n5UysljUGC/VpnTHGvq10S+2u7geITQaDfx6upKXV9+/dCdgxyd2Z/UZiOXD9wQobwEJdmmaMsWsT3aDJO9INqp35kFnA6MIzcNs5/VhfmOTswaoZQJKnAk8DbpvknIldNwI+P0xVw6iqD/b/ji4kb8TkVLgPAF5BNwf2VE6Fa3he2B3ollK9Cd3qWDOuoluKeEz+qf/3enQLgnydLijdDVgD3Guguob0EuD/6F6T7QeuZSgPBp4A7Ez3MzITnq8C/m6gmoZyFrNdmnYFftTfvwnwHWC34UobzD5VdYfFDxuFnye5T1V9Dn6zmM7PB65pqb0d+DDdku1HT7RfNbYPl0k+yDzdNWZU1UFLWM60mFkc5kDgxKo6LcmLhyxoY+y2sYgk96qqLw5dxzRI8j7g2Ko6t9++C/CCqjpk2MqWXpLzquouQ9cxDZI8oka6FPdcSV4HvH9mwZgkBwAPq6qnDFvZ0usHW7+iqi4Yupah9YvmvJluSssAV9DNC//1QQsbQJLbApdU1TVJ7kt3EebNVfXjYStbOklmFk16OHBL4K399uHA/45xkZStbSpcw/MikrwceDHd/8iP0L3Rn1FVb93oidugJOdX1Z0XaxuD/ufi407TB0n+GjiJ7orz6+h+8R09xtcmyblz53Ser20MknwDuC3wbbquTTODJ0fTt3WuJMsBquonQ9cylL67yipgJbAa+ABw56r6kyHrGkKSNVW1arG2MdjapsI1PC8iydlVtVeSP6XrxvFM4DPT+mloS0ryDuCnzH5Kfgxww6o6fLiqhjGxqt4v+tuYZ1X4elXtmeTBwJ8Dfw+8ZYwDBpOcDnyW9d8j+1XVg4erahhOSTYryQ7AI+gC4+Sc18cNVdNQJlbhfDbw86o6YWtbIGNz6T9gHlhVF/XbuwGrq+pOw1amxdjneXHX7f89EHh3VV2ZZGPHb8ueCDwV+Ot++zPAa4YrZzhVdaOha5giM2+IP6H7+vX8jPdNcjhwLPB+uj6Nn+nbRmeMIXkjPgBcSdc3/ppFjt3W/TLJ4cDjmR1PdN2NHL8tewZwRpKL6H6P3ho4ctiS1MIrz4tIcjzwMLpuG/vSDQD6UFVN5QhQLY0+HD4G2K2qXpRkF+BWVfWVgUtbcn3f1p3oBsXtCSwDznA6R6njGIlZSfag+4bqi1X1jv5q6yOr6mUDlzaI/luJO/ab/1VVY/9wtVUwPDfop6G6sqp+leQGwI2q6n+GrkvDSfIauum37ldVd0pyU+CjVbXPwKUtuSTXAfYCLqqqHye5ObBTVZ2zyKnSKCQ5EThhZrD12CXZEdi1qi4cuhbp2rjO0AVMu74T+9OY7Z7we3SDHTRu96iqvwCuBqiqHzHeKesK2AOYWRXrBoxsLnRpEfcBzkpyYZJzkpw7Z67j0UjyUOBsugH4JNkryanDViVtGvs8L+4kun5q9+63LwXeDXxosIo0DX6ZZBn9XJ1JVjC7EMTY/Dv9VXjgOLpZN94LjO4qvLSAA4YuYIq8gK4L5BkAVXV2ktsMWZC0qQzPi7ttVT2qH+BAVf1sbIOhnNB9Xv9GNyjsd5K8BDiEbpaJMbpHP3r+a9BdhU8yqqvwSU5g4++Rv1pon7Z9Dp5czy/nGXg/ygsP/WI5Z1fVT5M8lm6az3/152X6GZ4X94u+f9bMFcbbMr7R0v84dAHTpqreluQs4P50o6QfVlXfGLisoXgVvltpU9Lizk/yaGBZkt3punt9YeCahvIaYM9+EZ2/AV5Pt5jOH230LA3OAYOLSPJAuiuKewAfBf6AbmWoM4asS5oWSR4DPIruqsnJ9Ffhq+rdgxYmaer044ieBzyI7sLD6cCLqurqQQsbwMSc18cAl1bVG2bahq5NG2d4btDPHnBPujf6l6rqBwOXtKSSvKuqHpnkXOb5anrMK4apk+SOzF6F/8TYrsIn+ZeqevpCXZxG2rVJ0kYk+TTdwMknAvsB3we+PsYVSbc2hucFJNnoJ7+q+upS1TK0JLeqqstcMUyT+ikcF1RVVyxVLUNLsndVnZVk3q9bq+rTS12TNE0cO7OhJLcEHg2cWVWfTbIrcN+qevPApWkRhucFJPlUf/d6dFPTfZ3uqtrdgDVVda+hapOmQZJv0/0xDLAr8KP+/k2A71TVbgOWJ2mKTHywfDhwS2aXsD8c+N+qesYghU2BJMtZf9n20Vx42Fo5YHABVfXHAEneB/z+zOT2Se5CN9XO6CS5J3ACcCe6OY2XAT+tquWDFqZBzITjJK8D3l9Vq/vtA+hW5RydfgDUS+nGSPxmruuqcioujdrMty9J/qmqJtdK+GCSUQ64TfIU4IV06wXMXMkswN8XU85FUhZ3h8lVoarqPLrwOEavortK8E1gR+DPgFcPWpGmwT1ngjNAVX2Y2XnRx+YkuhH064A/phs5/9aNniGNyw0m53Xul+e+wYD1DOlvgbtU1cqq2q2/GZy3AobnxZ2T5PVJ7tvfXgeMcmUogKpaCyyrql9V1UnA/kPXpMF9L8nfJ1nZ354HfG/oogayY1V9gq5L3H9X1QuAAweuSZomzwDOSHJGP2DuU8BfD1zTUL4F/GzoIrTp7LaxuCcCT2X2zf0ZZpfqHpuf9YtfnJ3k5cBl+AFM3bcRx9ItGlN075HDB61oONckuQ7wzSRH0a1IesOBa5KmRlV9pO/edMe+6b+qamxrJ8x4LvCFJF9mYv0IF1Wafg4YVLN+to3vA9elu3pwY+Df+6vR0ugl2Qf4Bt2gyRfRvUdeXlVfGrQwSVMnyVeAzwHnMrGwVFWdPFhRamJ4liRJWmJJvlZVdx+6Dm06w7OaJXkI3dW0W9N1+QlQzrYhdZKsols9beY9AriQkKQNJfkH4GLgg6zfbcOp6qac4VnNkqylm6Pz3PIHR9pAkguBZ7Hh17AuJCQBSf4AOLuqfprkscDvA/86xvdIP1f+XOWMG9PP8LwAV0PaUL9wzP2r6teLHqxtXpIT2Ph7ZHSDXpJ8rqruM3Qd0rRKcg6wJ92CY28CXg88sqrmXZ1TmkbOtrGwfxy6gCn0bGB1P73Q5FdM/zxcSRrQKBc2WMSxSV4PfIL13yPvG64kaaqsq6pKcjDwqqp6Q5InDV3UEJIcCnykqq5K8vd0V+FfVFVfG7g0LcLwvICZ1ZC0npcA/0e3ctr2A9eigTkifF5PpJuC67rMdtsowPAsda5K8lzgscB+/dSO1x24pqE8v6reneQ+wAOAVwD/Adxj2LK0GMPzApK8q6oemeRc5vlqeqQDgH6vqu4ydBGaDkn+paqevlAXpzF2bQL2qao7DF2ENMUeBTwaeFJV/U+SXelC4xj9qv/3QODEqjotyYuHLEht7PO8gCS3qqrL+rmNNzDSwQ0vBz5eVR8duhYNL8neVXVWknn7Ko7x25skJwGvqKoLhq5FmmZJlrP+jDSjm2EiyYfoFlJ6IF2XjZ8DX6mqPQctTIsyPKtZkquAGwC/6G9OVSdNSPIN4LbAt+n6PM+8R8b4TZW0gSRPAV4IXM3sN1ajnGEiyfWB/elmsPpmklsBd/UC1fQzPC8iyT2BE4A70fXzXQb81MAodfqldl8K7EHXHx6Akf4x9JsqaSOSfBO4V1X9YOhapGvLPs+LexVwGPBuYBXweOD2g1Y0kCQBHgPsVlUvSrILcKuq+srApWlYJwHHAq+E/7+9uw3Ve47jOP7+mLuG3NSIWsgDI7ezGUKzuStKuSsJsZIHzE3JA+KBUSLiiZlH85RGRKjJkEw0d7XkZiQpk5G1mrW+Hvz/a2fHuC5N+5//db1fdbrO+Z/rnPM5V+c6fc/vfH/fH+fRbJrbo9NEHbFIlgb6BtjUdQhpV7jyPECSj6pqTpLPtv3rdVyP1EzyNM0EgQVVdVySg4E3q2pux9HUoSQfV9VpST6vqhMnXus6m6SpJcmpNH9wr2bHcY5jNxde/eXK82CbkuwNfNJumPuJMV1VA+ZV1ewkawCqakP72Gi8bW7HTX2V5FaaDTD7d5xJ0tT0DPAWk07hlPrE4nmw62j6nG8F7gRmAld0mqg7W5JMo93kkWQG/vIT3A5MBxYDDwILgBs6TSRpqtqrqu7qOoS0K2zb0NCSXEszo3M2sBy4Erivqp7vNJgkqReSPAx8B7zCjm0bYzeqTv1l8TxAkktpVtOOpFmpH+vxbElmAQtpHoeVVbW240jqWJI5wL1sf44AY3uQkKR/kWTdTi6P5ag69ZfF8wBJvgYup5nD6IMlTZLkS+BuJvUwOnlCkjSKxnXj23/xA/CFhbP0j9ZX1ctVta6qvt/20nUoSVNPkquSHNC+fl+SFe0EDqk3XHkeIMlcmraNVezYn/V4Z6GkKSTJQuAaYCU7PkdWdBZK0pS0bexrkrOBJcCjwP1VNa/jaNLQnLYx2EPARpqT0xzLJv3djcAsYC+2t20UYPEsabKt7e0lwLKqejXJki4DSf+VxfNgR1TVCV2HkKawuVV1bNchJPXCj0meAS4AHkmyD7aQqmf8gR3stSQXdh1CmsLeT3J81yEk9cLVwBvARVX1G3AIzYZjqTfseR4gyR/AfsCf7ctYj6qTJkuyFjgGWEfT87ztOeKoOknSyLF4lrRLkhy5s+tO3JAkjSKL5wGSBLgWOLqqHkwyEzi8qj7sOJokSZJ2M4vnAZI8TTNBYEFVHZfkYODNqprbcTRJkiTtZk7bGGxeVc1OsgagqjYkcWSdJEnSGHLaxmBbkkyjmVtLkhlMOIJYkiRJ48PiebCngBeBQ5M8BLwHPNxtJEmSJHXBnuchJJkFLKQZwbWyqtZ2HEmSJEkdsHiWJEmShmTbhiRJkjQki2dJkiRpSBbPkjRiksxPctaEt29Jcn2XmSRpVDjnWZJGz3xgI/A+QFUt7TSNJI0QNwxKUk8keQmYCewLPFlVy5JcTDM+cxrwC7AI+ADYCqwHbqOZFrSxqh5LcgqwFJgOfAPc1B7+9DawGjgPOAhYVFXv7s7vT5L6wLYNSeqPm6rqNGAOsDjJYcCzwBVVdTJwVVV9R1McP1FVp+ykAH4OuKeqTgI+Bx6Y8L49q+p04I5J1yVJLYtnSeqPxUk+pVlZngncDLxTVesAqurXf/vgJAcCB1XVqvbScuDcCXdZ0d5+DBz1P+aWpJFh8SxJPZBkPnA+cGa7yrwG+OR//jKb29utuCdGknbK4lmS+uFAYENVbWpPPT2Dpvf53CRHAyQ5pL3vH8ABkz9BVf0ObEhyTnvpOmDV5PtJkv6ZKwuS1A+vA7ckWQt8SdO6sZ6mdWNFkj2An4ELgFeAF5JcRrNhcKIbgKVJpgPfAjfupvySNBKctiFJkiQNybYNSZIkaUgWz5IkSdKQLJ4lSZKkIVk8S5IkSUOyeJYkSZKGZPEsSZIkDcniWZIkSRqSxbMkSZI0pL8A0Ge+REYFgT8AAAAASUVORK5CYII=\n"
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "fig, ax = plt.subplots(1,1,figsize=[12,8])\n",
+    "freq= pd.crosstab(index = df[\"action\"],columns = \"count\")\n",
+    "(freq / freq.sum()).plot(kind = \"bar\", legend = False, ax=ax)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "outputs": [
+    {
+     "name": "stdout",
+     "text": [
+      "col_0              count\naction                  \nemail destination   2432\nemail discount      3820\nemail gift          2163\nmail destination     332\nmail discount        362\nmail gift            551\nno action           3100\nsms destination     1175\nsms discount        2014\nsms gift            4051\n"
+     ],
+     "output_type": "stream"
+    }
+   ],
+   "source": [
+    "print(freq)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## What kind of classification?\n",
+    "\n",
+    "This is a multiclass problem as there are 10 unique classes.  In DataRobot there are two ways in which we can handle this problem.  \n",
+    "\n",
+    "1.  Multiclass Classification\n",
+    "2.  One Vs. All Classification"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Create the Multiclass Project\n",
+    "\n",
+    "Here, we create a DataRobot project for option 1 above. For simplicity, we'll run in manual mode and choose a single xgboost model trained on 64% of the data.\n",
+    "\n",
+    "Note: it may take a while to create the project and return the project id."
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "outputs": [
+    {
+     "name": "stdout",
+     "text": [
+      "Project ID: 5dfc109712de0b1b7851e9e9\n"
+     ],
+     "output_type": "stream"
+    }
+   ],
+   "source": [
+    "now = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M')\n",
+    "project_name = 'Next_Best_Action-Multiclass{}'.format(now)\n",
+    "\n",
+    "mcp = dr.Project.create(df, project_name = project_name)\n",
+    "print('Project ID: {}'.format(mcp.id))"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Now, we'll set the target variable and start modeling in manual mode. In this mode, DataRobot will analyze the data set, compute ACE scores, and create data partitions for training, but will not select any blueprints to run.\n",
+    "\n",
+    "As with the previous step, this will take a little while to complete."
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "Project(Next_Best_Action-Multiclass2019-12-19T19:06)"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 9
+    }
+   ],
+   "source": [
+    "mcp.set_target(target = \"action\", mode = \"manual\")"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Now, we'll check the status of the project. Here we can see if autopilot has completed and what stage the project is in."
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "{'autopilot_done': False,\n 'stage_description': 'Ready for modeling',\n 'stage': 'modeling'}"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 10
+    }
+   ],
+   "source": [
+    "mcp.get_status()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Here, we manually choose to run a single xgboost model to train on 64% of the data. Again, this will take some time to complete training the model since we'll be using 64% of the data."
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "'5'"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 11
+    }
+   ],
+   "source": [
+    "blueprints = mcp.get_blueprints()\n",
+    "model = list(filter(lambda x: \"eXtreme\" in str(x), blueprints)).pop(0)\n",
+    "mcp.train(model, sample_pct = 64)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "This gets the currently in-progress and queued jobs so we can check on the status of our single model being built. We need to wait for this model to finish before moving on to the next step."
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "[ModelJob(eXtreme Gradient Boosted Trees Classifier with Early Stopping, status=inprogress)]"
+     },
+     "metadata": {},
+     "output_type": "execute_result",
+     "execution_count": 14
+    }
+   ],
+   "source": [
+    "mcp.get_model_jobs()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "outputs": [
+    {
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mIndexError\u001b[0m                                Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-25-4dacfea91615>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mmcp_model\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mmcp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_models\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mIndexError\u001b[0m: list index out of range"
+     ],
+     "ename": "IndexError",
+     "evalue": "list index out of range",
+     "output_type": "error"
+    }
+   ],
+   "source": [
+    "mcp_model = mcp.get_models()[0]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## One Vs All"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "classes = df[\"action\"].unique()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "def one_vs_all_mf(multiclass_column_name, data):\n",
+    "    ## create a project per class for a one vs all type problem\n",
+    "    ## train an xgboost per project\n",
+    "    project_list = []\n",
+    "    classes = data[multiclass_column_name].unique()\n",
+    "    for c in classes:\n",
+    "        df[\"target\"] = df[multiclass_column_name].apply(lambda x: x == c)\n",
+    "        p = dr.Project.create(df.drop([multiclass_column_name],axis=1), project_name = c)\n",
+    "        p.set_target(\"target\", mode=\"manual\")\n",
+    "        blueprints = p.get_blueprints()\n",
+    "        model = list(filter(lambda x: \"eXtreme\" in str(x), blueprints)).pop(0)\n",
+    "        p.train(model, sample_pct=64)\n",
+    "        project_list.append(p)\n",
+    "    return project_list"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "outputs": [
+    {
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-24-2cd96f3bf921>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mprojects\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mone_vs_all_mf\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"action\"\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNameError\u001b[0m: name 'one_vs_all_mf' is not defined"
+     ],
+     "ename": "NameError",
+     "evalue": "name 'one_vs_all_mf' is not defined",
+     "output_type": "error"
+    }
+   ],
+   "source": [
+    "projects = one_vs_all_mf(\"action\", df)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": false
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "# df[\"partition\"] # i would set this\n",
+    "\n",
+    "# dr.AdvancedOptions()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "projects"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "models = [p.get_models()[0] for p in projects]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# A one vs all ROC and AUC"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "roc_curves = {}\n",
+    "for m in models:\n",
+    "    roc_points = m.get_all_roc_curves()[0].roc_points\n",
+    "    points = [(x[\"false_positive_rate\"],x[\"true_positive_rate\"]) for x in roc_points]\n",
+    "    fpr, tpr = zip(*points)\n",
+    "    roc_curves[\"{} - AUC: {:.3}\".format(str(m.project), m.metrics[\"AUC\"][\"validation\"])] = {\"tpr\":tpr, \"fpr\":fpr}\n"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "## average out the roc curves\n",
+    "## taken from https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html\n",
+    "\n",
+    "n_classes = len(classes)\n",
+    "\n",
+    "all_fpr = np.unique(np.concatenate([y[\"fpr\"] for x,y in roc_curves.items()]))\n",
+    "\n",
+    "# Then interpolate all ROC curves at this points\n",
+    "mean_tpr = np.zeros_like(all_fpr)\n",
+    "\n",
+    "for x,y in roc_curves.items():\n",
+    "    mean_tpr += interp(all_fpr, y[\"fpr\"], y[\"tpr\"]) \n",
+    "\n",
+    "# Finally average it and compute AUC\n",
+    "mean_tpr /= n_classes # freq.sum().values[0] #n_classes\n",
+    "\n",
+    "from sklearn.metrics import roc_curve, auc\n",
+    "fpr_macro = all_fpr\n",
+    "tpr_macro = mean_tpr\n",
+    "auc_macro = auc(fpr_macro, tpr_macro)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "np.random.seed(138)\n",
+    "plt.figure(figsize=[12,8])\n",
+    "lw=2\n",
+    "for x,y in roc_curves.items():\n",
+    "    plt.plot(y[\"fpr\"],y[\"tpr\"], c = np.random.rand(3,), lw=lw, label = str(x))\n",
+    "plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')\n",
+    "plt.plot(fpr_macro, tpr_macro, color=\"red\", lw=3, linestyle=\"--\",label = \"average {:.3}\".format(auc_macro))\n",
+    "plt.legend(loc=\"lower right\");"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "[m.request_feature_impact() for m in models]\n",
+    "## make a table of normalized feature impacts \n",
+    "## columns will be features rows will be project.  \n",
+    "#mcp_fi = pd.DataFrame(mcp_model.get_or_request_feature_impact()).set_index(\"featureName\")[\"impactNormalized\"]\n",
+    "projects_fi = [pd.DataFrame(m.get_feature_impact()).set_index(\"featureName\")[\"impactNormalized\"] for m in models]\n",
+    "#projects_fi.append(mcp_fi)\n",
+    "fi_columns = [str(m.project) for m in models]\n",
+    "#fi_columns.append(\"mcp\")\n",
+    "fi = pd.concat([p.T for p in projects_fi],sort=True,axis=1)\n",
+    "fi.columns = fi_columns\n",
+    "fi.T"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "fi_sorted = np.argsort(fi.T, axis=1)\n",
+    "for c in fi_sorted.columns:\n",
+    "    fi_sorted[c] = fi_sorted[c].apply(lambda x: fi_sorted.columns[x])    \n",
+    "fi_sorted.columns = [ \"feature {}\".format(i) for i in np.arange(fi_sorted.shape[1])]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "fi_sorted"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Feature Impact for the Multiclass XGBoost"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "mcp_fi = pd.DataFrame(mcp_model.get_or_request_feature_impact())\n",
+    "\n",
+    "# Formats the ticks from a float into a percent\n",
+    "percent_tick_fmt = mtick.PercentFormatter(xmax=1.0)\n",
+    "\n",
+    "dr_dark_blue = '#08233F'\n",
+    "dr_blue = '#1F77B4'\n",
+    "dr_orange = '#FF7F0E'\n",
+    "dr_red = '#BE3C28'\n",
+    "\n",
+    "mcp_fi.sort_values(by='impactNormalized', ascending=True, inplace=True)\n",
+    "\n",
+    "# Positive values are blue, negative are red\n",
+    "bar_colors = mcp_fi.impactNormalized.apply(lambda x: dr_red if x < 0\n",
+    "                                              else dr_blue)\n",
+    "\n",
+    "ax = mcp_fi.plot.barh(x='featureName', y='impactNormalized',\n",
+    "                         legend=False,\n",
+    "                         color=bar_colors,\n",
+    "                         figsize=(12, 8))\n",
+    "\n",
+    "plt.ylabel('')\n",
+    "plt.xlabel('Effect')\n",
+    "# plt.xlim((None, 1))  # Allow for negative impact\n",
+    "plt.title('Feature Impact', y=1.04)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "fig, ax = plt.subplots(1,1,figsize = [12,8])\n",
+    "fi.T[mcp_fi[\"featureName\"].values].boxplot(ax=ax, vert=False)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Converting One vs All Probs to multiclass probs.  \n",
+    "\n",
+    "If you already have probabilities, you can simply do `probs/probs.sum(axis=1, keepdims=True)`, which will normalize the probabilities for each row such that they sum to one.  \n",
+    "\n",
+    "A clever way to make class assignments for multiclass problems.  https://stats.stackexchange.com/questions/208915/one-vs-many-one-vs-all-what-value-to-use-as-probability"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "datasets = [p.upload_dataset(df) for p in projects]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "preds_request = [(str(m.project), m.request_predictions(d.id)) for m, d in zip(models, datasets)]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "pred_results = [p.get_result_when_complete() for p in preds_request]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "preds_results_df = pd.DataFrame([p[\"positive_probability\"] for p in pred_results]).T\n",
+    "preds_results_df.columns = [str(p) for p in projects]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "norm_preds_results_df = preds_results_df / preds_results_df.values.sum(axis=1, keepdims=True)"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [
+    "norm_preds_results_df.head()"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "outputs": [],
+   "source": [],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.6"
+  },
+  "pycharm": {
+   "stem_cell": {
+    "cell_type": "raw",
+    "source": [],
+    "metadata": {
+     "collapsed": false
+    }
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
