@@ -1,0 +1,47 @@
+# iterates through all combinations of state and coverage to produce multiple DR projects
+# returns dictionary containing project_id's for all projects created
+def pricing_factory(data, state_list, state_var, cov_tbl, cov_list,
+                    model_types, grp_partition_col):
+    proj_dict = {}
+    for i in state_list:
+        for j in cov_list:
+            # setup variables
+            print(i); print(j)
+            states = i; cov = j; projectname = "_".join(states) + "_" + cov; cov_tbl = coverage_tbl
+            # lookup values in coverage table
+            target = cov_tbl[cov_tbl['Coverage'] == cov]['Incurred_Loss'].values[0]
+            claim_cnt = cov_tbl[cov_tbl['Coverage'] == cov]['Claim_Count'].values[0]
+            offset_col = cov_tbl[cov_tbl['Coverage'] == cov]['Offset_log'].values[0]
+            # pull out variable list for coverage
+            var_list = model_vars[cov].values.tolist()
+            # subset dataset
+            data_subset = state_prep(df = data,
+                                     state_var = state_var,
+                                     state = states,
+                                     cov = cov,
+                                     cov_tbl = cov_tbl)
+            #data_subset = exposure_filter(data_subset, 'COLL', coverage_tbl)
+            #data_subset = theo_normalized(data_subset, 'COLL', coverage_tbl)
+            print("Finished data prep")
+            # setup and run project
+            project = dr.Project.create(data_subset, projectname)
+            proj_dict[projectname] = project.id
+            print("Loaded data to DR")
+            # create feature list
+            featurelist = project.create_featurelist('Model_Vars', var_list)
+            print("Created feature list")
+            # custom setup for loss cost model
+            advanced_options = dr.AdvancedOptions(offset=[offset_col], events_count=claim_cnt, smart_downsampled=False)
+            #partition_spec = dr.GroupCV(holdout_pct=20, reps = 5, partition_key_cols=[grp_partition_col])
+            partition_spec = dr.GroupTVH(holdout_pct=0, validation_pct=15, partition_key_cols=[grp_partition_col])
+            project.set_target(target,
+                               worker_count=-1,
+                               partitioning_method=partition_spec,
+                               advanced_options=advanced_options,
+                               mode=dr.AUTOPILOT_MODE.MANUAL,
+                               max_wait=2000)
+            # train specific models
+            bp_list = blueprint_select(project, model_types)
+            for bp in bp_list:
+                project.train(bp, sample_pct = 50, featurelist_id = featurelist.id)
+    return(proj_dict)
